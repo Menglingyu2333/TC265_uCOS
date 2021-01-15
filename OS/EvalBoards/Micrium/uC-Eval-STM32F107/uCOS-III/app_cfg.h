@@ -39,7 +39,7 @@
 *********************************************************************************************************
 */
 
-#define  APP_CFG_SERIAL_EN                          DEF_ENABLED
+#define  APP_CFG_SERIAL_EN                          DEF_DISABLED
 
 /*
 *********************************************************************************************************
@@ -48,6 +48,8 @@
 */
 
 #define  APP_TASK_START_PRIO                        2
+#define  APP_TASK_1_PRIO                            4
+#define  APP_TASK_2_PRIO                            6
 
 
 /*
@@ -58,6 +60,8 @@
 */
 
 #define  APP_TASK_START_STK_SIZE                    128
+#define  APP_TASK_1_STK_SIZE                        128
+#define  APP_TASK_2_STK_SIZE                        128
 
 
 /*
@@ -81,7 +85,7 @@
 #define  TRACE_LEVEL_DEBUG                          2
 #endif
 
-#define  APP_TRACE_LEVEL                            TRACE_LEVEL_INFO
+#define  APP_TRACE_LEVEL                            TRACE_LEVEL_OFF
 #define  APP_TRACE                                  BSP_Ser_Printf
 
 #define  APP_TRACE_INFO(x)            ((APP_TRACE_LEVEL >= TRACE_LEVEL_INFO)  ? (void)(APP_TRACE x) : (void)0)

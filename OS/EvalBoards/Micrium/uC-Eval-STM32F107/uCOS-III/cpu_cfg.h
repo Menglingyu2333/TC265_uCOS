@@ -103,7 +103,7 @@
 
                                                                 /* Configure CPU timestamp timer word size ...          */
                                                                 /* ... (see Note #2) :                                  */
-#define  CPU_CFG_TS_TMR_SIZE                    CPU_WORD_SIZE_32
+#define  CPU_CFG_TS_TMR_SIZE                    CPU_WORD_SIZE_64
 
 
 /*
@@ -139,37 +139,6 @@
                                                                 /* Configure number of interrupts disabled overhead ... */
 #define  CPU_CFG_INT_DIS_MEAS_OVRHD_NBR                    1u   /* ... time measurements (see Note #1b).                */
 
-
-/*$PAGE*/
-/*
-*********************************************************************************************************
-*                                CPU COUNT LEADING ZEROS CONFIGURATION
-*
-* Note(s) : (1) Configure CPU_CFG_LEAD_ZEROS_ASM_PRESENT to prototype/define count leading zeros bits
-*               function(s) in :
-*
-*               (a) 'cpu.h'/'cpu_a.asm',       if CPU_CFG_LEAD_ZEROS_ASM_PRESENT      #define'd in 'cpu.h'/
-*                                                 'cpu_cfg.h' to enable assembly-version function(s)
-*
-*               (b) 'cpu_core.h'/'cpu_core.c', if CPU_CFG_LEAD_ZEROS_ASM_PRESENT  NOT #define'd in 'cpu.h'/
-*                                                 'cpu_cfg.h' to enable C-source-version function(s) otherwise
-*
-*               See also 'cpu_core.h  FUNCTION PROTOTYPES  Note #2'
-*                      & 'cpu_core.h  CPU INCLUDE FILES    Note #3'.
-*********************************************************************************************************
-*/
-
-#if 1                                                           /* Configure CPU count leading zeros bits ...           */
-#define  CPU_CFG_LEAD_ZEROS_ASM_PRESENT                         /* ... assembly-version (see Note #1).                  */
-#endif
-
-
-/*$PAGE*/
-/*
-*********************************************************************************************************
-*                                             MODULE END
-*********************************************************************************************************
-*/
 
 #endif                                                          /* End of CPU cfg module include.                       */
 

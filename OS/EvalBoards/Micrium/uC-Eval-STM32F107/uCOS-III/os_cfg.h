@@ -35,7 +35,7 @@
 #define OS_CFG_ARG_CHK_EN               1u   /* Enable (1) or Disable (0) argument checking                           */
 #define OS_CFG_CALLED_FROM_ISR_CHK_EN   1u   /* Enable (1) or Disable (0) check for called from ISR                   */
 #define OS_CFG_DBG_EN                   1u   /* Enable (1) debug code/variables                                       */
-#define OS_CFG_ISR_POST_DEFERRED_EN     1u   /* Enable (1) or Disable (0) Deferred ISR posts                          */
+#define OS_CFG_ISR_POST_DEFERRED_EN     0u   /* Enable (1) or Disable (0) Deferred ISR posts                          */
 #define OS_CFG_OBJ_TYPE_CHK_EN          1u   /* Enable (1) or Disable (0) object type checking                        */
 #define OS_CFG_TS_EN                    1u   /* Enable (1) or Disable (0) time stamping                               */
 
@@ -80,7 +80,7 @@
 
 
                                              /* -------------------------- TASK MANAGEMENT -------------------------- */
-#define OS_CFG_STAT_TASK_EN             1u   /* Enable (1) or Disable(0) the statistics task                          */
+#define OS_CFG_STAT_TASK_EN             0u   /* Enable (1) or Disable(0) the statistics task                          */
 #define OS_CFG_STAT_TASK_STK_CHK_EN     1u   /* Check task stacks from statistic task                                 */
 
 #define OS_CFG_TASK_CHANGE_PRIO_EN      1u   /* Include code for OSTaskChangePrio()                                   */
@@ -99,7 +99,7 @@
 
 
                                              /* ------------------------- TIMER MANAGEMENT -------------------------- */
-#define OS_CFG_TMR_EN                   1u   /* Enable (1) or Disable (0) code generation for TIMERS                  */
+#define OS_CFG_TMR_EN                   0u   /* Enable (1) or Disable (0) code generation for TIMERS                  */
 #define OS_CFG_TMR_DEL_EN               1u   /* Enable (1) or Disable (0) code generation for OSTmrDel()              */
 
 #endif

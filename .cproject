@@ -29,17 +29,37 @@
                     					
                     <folderInfo id="Debug.Executable." name="/" resourcePath="">
                         						
-                        <toolChain id="com.infineon.aurix.buildsystem.managed.toolChain.tasking.exe.binary.864987353" name="AURIX Toolchain" superClass="com.infineon.aurix.buildsystem.managed.toolChain.tasking.exe.binary">
+                        <toolChain id="com.infineon.aurix.buildsystem.managed.toolChain.tasking.exe.binary.1047501034" name="AURIX Toolchain" superClass="com.infineon.aurix.buildsystem.managed.toolChain.tasking.exe.binary">
                             							
-                            <option id="com.tasking.ctc.cpu.480772391" name="Processor" superClass="com.tasking.ctc.cpu" value="tc26xb" valueType="string"/>
+                            <option id="com.tasking.ctc.cpu.229676890" name="Processor" superClass="com.tasking.ctc.cpu" useByScannerDiscovery="false" value="tc26xb" valueType="string"/>
                             							
-                            <targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="com.infineon.aurix.buildsystem.managed.tasking.targetPlatform.1651498656" isAbstract="false" osList="all" superClass="com.infineon.aurix.buildsystem.managed.tasking.targetPlatform"/>
+                            <targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="com.infineon.aurix.buildsystem.managed.tasking.targetPlatform.1766369710" isAbstract="false" osList="all" superClass="com.infineon.aurix.buildsystem.managed.tasking.targetPlatform"/>
                             							
-                            <builder buildPath="${workspace_loc:/TC265_uCOS}/Debug" id="com.infineon.aurix.buildsystem.managed.tasking.builder.1170758503" keepEnvironmentInBuildfile="false" name="Gnu Make Builder" superClass="com.infineon.aurix.buildsystem.managed.tasking.builder"/>
+                            <builder buildPath="${workspace_loc:/TC265_uCOS_v2}/Debug" id="com.infineon.aurix.buildsystem.managed.tasking.builder.1786166484" keepEnvironmentInBuildfile="false" name="Gnu Make Builder" superClass="com.infineon.aurix.buildsystem.managed.tasking.builder"/>
                             							
-                            <tool id="com.infineon.aurix.buildsystem.managed.tool.c.compiler.tasking.debug.176751751" name="TASKING C Compiler" superClass="com.infineon.aurix.buildsystem.managed.tool.c.compiler.tasking.debug">
+                            <tool id="com.infineon.aurix.buildsystem.managed.tool.c.compiler.tasking.debug.1185653515" name="TASKING C Compiler" superClass="com.infineon.aurix.buildsystem.managed.tool.c.compiler.tasking.debug">
                                 								
-                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.infineon.aurix.buildsystem.managed.c.compiler.tasking.include.276785506" name="Include paths" superClass="com.infineon.aurix.buildsystem.managed.c.compiler.tasking.include" valueType="includePath">
+                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.infineon.aurix.buildsystem.managed.c.compiler.tasking.include.882820221" name="Include paths" superClass="com.infineon.aurix.buildsystem.managed.c.compiler.tasking.include" useByScannerDiscovery="false" valueType="includePath">
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/OS}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/OS/EvalBoards/Micrium/uC-Eval-STM32F107/BSP}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/OS/EvalBoards/Micrium/uC-Eval-STM32F107/uCOS-III}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/OS/uC-CPU/ARM-Cortex-M3/RealView}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/OS/uC-LIB/Ports/ARM-Cortex-M3/RealView}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/OS/uC-CPU}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/OS/uC-LIB}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/OS/uCOS-III/Ports/ARM-Cortex-M3/Generic/RealView}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/OS/uCOS-III/Source}&quot;"/>
                                     									
                                     <listOptionValue builtIn="false" value="&quot;${ProjDirPath}/Libraries/iLLD/TC26B/Tricore/Gpt12&quot;"/>
                                     									
@@ -319,27 +339,27 @@
                                     								
                                 </option>
                                 								
-                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.infineon.aurix.buildsystem.managed.c.compiler.tasking.preprocessor.definedSymbols.1082842990" name="Defined symbols" superClass="com.infineon.aurix.buildsystem.managed.c.compiler.tasking.preprocessor.definedSymbols" valueType="definedSymbols">
+                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.infineon.aurix.buildsystem.managed.c.compiler.tasking.preprocessor.definedSymbols.1364352037" name="Defined symbols" superClass="com.infineon.aurix.buildsystem.managed.c.compiler.tasking.preprocessor.definedSymbols" useByScannerDiscovery="false" valueType="definedSymbols">
                                     									
                                     <listOptionValue builtIn="false" value="__CPU__=tc26xb"/>
                                     								
                                 </option>
                                 								
-                                <inputType id="com.infineon.aurix.buildsystem.managed.tool.c.compiler.tasking.input.2090641209" name="C" superClass="com.infineon.aurix.buildsystem.managed.tool.c.compiler.tasking.input"/>
+                                <inputType id="com.infineon.aurix.buildsystem.managed.tool.c.compiler.tasking.input.527791998" name="C" superClass="com.infineon.aurix.buildsystem.managed.tool.c.compiler.tasking.input"/>
                                 							
                             </tool>
                             							
-                            <tool id="com.infineon.aurix.buildsystem.managed.tool.c.assembler.tasking.501583244" name="TASKING Assembler" superClass="com.infineon.aurix.buildsystem.managed.tool.c.assembler.tasking">
+                            <tool id="com.infineon.aurix.buildsystem.managed.tool.c.assembler.tasking.1899393588" name="TASKING Assembler" superClass="com.infineon.aurix.buildsystem.managed.tool.c.assembler.tasking">
                                 								
-                                <inputType id="com.infineon.aurix.buildsystem.managed.tool.c.assembler.tasking.input.1413670500" superClass="com.infineon.aurix.buildsystem.managed.tool.c.assembler.tasking.input"/>
+                                <inputType id="com.infineon.aurix.buildsystem.managed.tool.c.assembler.tasking.input.671923784" superClass="com.infineon.aurix.buildsystem.managed.tool.c.assembler.tasking.input"/>
                                 							
                             </tool>
                             							
-                            <tool id="com.infineon.aurix.buildsystem.managed.tool.c.linker.tasking.1688439788" name="TASKING Linker" superClass="com.infineon.aurix.buildsystem.managed.tool.c.linker.tasking"/>
+                            <tool id="com.infineon.aurix.buildsystem.managed.tool.c.linker.tasking.879828280" name="TASKING Linker" superClass="com.infineon.aurix.buildsystem.managed.tool.c.linker.tasking"/>
                             							
-                            <tool id="com.infineon.aurix.buildsystem.managed.tool.c.linker.hex.tasking.515255688" name="TASKING HEX Generator" superClass="com.infineon.aurix.buildsystem.managed.tool.c.linker.hex.tasking"/>
+                            <tool id="com.infineon.aurix.buildsystem.managed.tool.c.linker.hex.tasking.1173532656" name="TASKING HEX Generator" superClass="com.infineon.aurix.buildsystem.managed.tool.c.linker.hex.tasking"/>
                             							
-                            <tool id="com.infineon.aurix.buildsystem.managed.tool.printsize.tasking.1398434831" name="Print Size" superClass="com.infineon.aurix.buildsystem.managed.tool.printsize.tasking"/>
+                            <tool id="com.infineon.aurix.buildsystem.managed.tool.printsize.tasking.405742206" name="Print Size" superClass="com.infineon.aurix.buildsystem.managed.tool.printsize.tasking"/>
                             						
                         </toolChain>
                         					
@@ -385,17 +405,17 @@
                     					
                     <folderInfo id="Release.Executable." name="/" resourcePath="">
                         						
-                        <toolChain id="com.infineon.aurix.buildsystem.managed.toolChain.tasking.exe.binary.release.234650983" name="AURIX Toolchain" superClass="com.infineon.aurix.buildsystem.managed.toolChain.tasking.exe.binary.release">
+                        <toolChain id="com.infineon.aurix.buildsystem.managed.toolChain.tasking.exe.binary.release.1069094926" name="AURIX Toolchain" superClass="com.infineon.aurix.buildsystem.managed.toolChain.tasking.exe.binary.release">
                             							
-                            <option id="com.tasking.ctc.cpu.1355139952" name="Processor" superClass="com.tasking.ctc.cpu" value="tc26xb" valueType="string"/>
+                            <option id="com.tasking.ctc.cpu.199829669" name="Processor" superClass="com.tasking.ctc.cpu" value="tc26xb" valueType="string"/>
                             							
-                            <targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="com.infineon.aurix.buildsystem.managed.tasking.targetPlatform.1891761448" isAbstract="false" osList="all" superClass="com.infineon.aurix.buildsystem.managed.tasking.targetPlatform"/>
+                            <targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="com.infineon.aurix.buildsystem.managed.tasking.targetPlatform.1953395896" isAbstract="false" osList="all" superClass="com.infineon.aurix.buildsystem.managed.tasking.targetPlatform"/>
                             							
-                            <builder buildPath="${workspace_loc:/TC265_uCOS}/Release" id="com.infineon.aurix.buildsystem.managed.tasking.builder.1588390345" keepEnvironmentInBuildfile="false" name="Gnu Make Builder" superClass="com.infineon.aurix.buildsystem.managed.tasking.builder"/>
+                            <builder buildPath="${workspace_loc:/TC265_uCOS_v2}/Release" id="com.infineon.aurix.buildsystem.managed.tasking.builder.1690267860" keepEnvironmentInBuildfile="false" name="Gnu Make Builder" superClass="com.infineon.aurix.buildsystem.managed.tasking.builder"/>
                             							
-                            <tool id="com.infineon.aurix.buildsystem.managed.tool.c.compiler.tasking.release.950701425" name="TASKING C Compiler" superClass="com.infineon.aurix.buildsystem.managed.tool.c.compiler.tasking.release">
+                            <tool id="com.infineon.aurix.buildsystem.managed.tool.c.compiler.tasking.release.1307643679" name="TASKING C Compiler" superClass="com.infineon.aurix.buildsystem.managed.tool.c.compiler.tasking.release">
                                 								
-                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.infineon.aurix.buildsystem.managed.c.compiler.tasking.include.183517000" name="Include paths" superClass="com.infineon.aurix.buildsystem.managed.c.compiler.tasking.include" valueType="includePath">
+                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.infineon.aurix.buildsystem.managed.c.compiler.tasking.include.27654286" name="Include paths" superClass="com.infineon.aurix.buildsystem.managed.c.compiler.tasking.include" valueType="includePath">
                                     									
                                     <listOptionValue builtIn="false" value="&quot;${ProjDirPath}/Libraries/iLLD/TC26B/Tricore/Gpt12&quot;"/>
                                     									
@@ -673,27 +693,27 @@
                                     								
                                 </option>
                                 								
-                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.infineon.aurix.buildsystem.managed.c.compiler.tasking.preprocessor.definedSymbols.568475117" name="Defined symbols" superClass="com.infineon.aurix.buildsystem.managed.c.compiler.tasking.preprocessor.definedSymbols" valueType="definedSymbols">
+                                <option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.infineon.aurix.buildsystem.managed.c.compiler.tasking.preprocessor.definedSymbols.1900023279" name="Defined symbols" superClass="com.infineon.aurix.buildsystem.managed.c.compiler.tasking.preprocessor.definedSymbols" valueType="definedSymbols">
                                     									
                                     <listOptionValue builtIn="false" value="__CPU__=tc26xb"/>
                                     								
                                 </option>
                                 								
-                                <inputType id="com.infineon.aurix.buildsystem.managed.tool.c.compiler.tasking.input.1547034671" name="C" superClass="com.infineon.aurix.buildsystem.managed.tool.c.compiler.tasking.input"/>
+                                <inputType id="com.infineon.aurix.buildsystem.managed.tool.c.compiler.tasking.input.1051463788" name="C" superClass="com.infineon.aurix.buildsystem.managed.tool.c.compiler.tasking.input"/>
                                 							
                             </tool>
                             							
-                            <tool id="com.infineon.aurix.buildsystem.managed.tool.c.assembler.tasking.494446425" name="TASKING Assembler" superClass="com.infineon.aurix.buildsystem.managed.tool.c.assembler.tasking">
+                            <tool id="com.infineon.aurix.buildsystem.managed.tool.c.assembler.tasking.696377563" name="TASKING Assembler" superClass="com.infineon.aurix.buildsystem.managed.tool.c.assembler.tasking">
                                 								
-                                <inputType id="com.infineon.aurix.buildsystem.managed.tool.c.assembler.tasking.input.1074543140" superClass="com.infineon.aurix.buildsystem.managed.tool.c.assembler.tasking.input"/>
+                                <inputType id="com.infineon.aurix.buildsystem.managed.tool.c.assembler.tasking.input.1140245838" superClass="com.infineon.aurix.buildsystem.managed.tool.c.assembler.tasking.input"/>
                                 							
                             </tool>
                             							
-                            <tool id="com.infineon.aurix.buildsystem.managed.tool.c.linker.tasking.1676091740" name="TASKING Linker" superClass="com.infineon.aurix.buildsystem.managed.tool.c.linker.tasking"/>
+                            <tool id="com.infineon.aurix.buildsystem.managed.tool.c.linker.tasking.1258728425" name="TASKING Linker" superClass="com.infineon.aurix.buildsystem.managed.tool.c.linker.tasking"/>
                             							
-                            <tool id="com.infineon.aurix.buildsystem.managed.tool.c.linker.hex.tasking.1899497809" name="TASKING HEX Generator" superClass="com.infineon.aurix.buildsystem.managed.tool.c.linker.hex.tasking"/>
+                            <tool id="com.infineon.aurix.buildsystem.managed.tool.c.linker.hex.tasking.128890513" name="TASKING HEX Generator" superClass="com.infineon.aurix.buildsystem.managed.tool.c.linker.hex.tasking"/>
                             							
-                            <tool id="com.infineon.aurix.buildsystem.managed.tool.printsize.tasking.288866440" name="Print Size" superClass="com.infineon.aurix.buildsystem.managed.tool.printsize.tasking"/>
+                            <tool id="com.infineon.aurix.buildsystem.managed.tool.printsize.tasking.312739143" name="Print Size" superClass="com.infineon.aurix.buildsystem.managed.tool.printsize.tasking"/>
                             						
                         </toolChain>
                         					
@@ -717,7 +737,7 @@
     	
     <storageModule moduleId="cdtBuildSystem" version="4.0.0">
         		
-        <project id="TC265_uCOS.com.infineon.aurix.buildsystem.managed.projectType.1280881012" name="AURIX Project" projectType="com.infineon.aurix.buildsystem.managed.projectType"/>
+        <project id="TC265_uCOS_v2.com.infineon.aurix.buildsystem.managed.projectType.1145312487" name="AURIX Project" projectType="com.infineon.aurix.buildsystem.managed.projectType"/>
         	
     </storageModule>
     	
@@ -740,5 +760,7 @@
         </project-mappings>
         	
     </storageModule>
+    	
+    <storageModule moduleId="refreshScope"/>
     
 </cproject>

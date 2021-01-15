@@ -8,6 +8,13 @@ RM := rm -rf
 
 # All of the sources participating in the build are defined here
 -include sources.mk
+-include OS/uCOS-III/Source/subdir.mk
+-include OS/uCOS-III/Ports/ARM-Cortex-M3/Generic/RealView/subdir.mk
+-include OS/uC-LIB/subdir.mk
+-include OS/uC-CPU/ARM-Cortex-M3/RealView/subdir.mk
+-include OS/uC-CPU/subdir.mk
+-include OS/EvalBoards/Micrium/uC-Eval-STM32F107/uCOS-III/subdir.mk
+-include OS/EvalBoards/Micrium/uC-Eval-STM32F107/BSP/subdir.mk
 -include Libraries/iLLD/TC26B/Tricore/_PinMap/subdir.mk
 -include Libraries/iLLD/TC26B/Tricore/_Lib/InternalMux/subdir.mk
 -include Libraries/iLLD/TC26B/Tricore/_Lib/DataHandling/subdir.mk
@@ -108,39 +115,39 @@ endif
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXECUTABLES += \
-TC265_uCOS.elf \
-TC265_uCOS.hex \
+TC265_uCOS_v2.elf \
+TC265_uCOS_v2.hex \
 
 SECONDARY_SIZE += \
-TC265_uCOS.siz \
+TC265_uCOS_v2.siz \
 
 
 # All Target
-all: TC265_uCOS.elf secondary-outputs
+all: TC265_uCOS_v2.elf secondary-outputs
 
 # Tool invocations
-TC265_uCOS.elf: $(OBJS)
+TC265_uCOS_v2.elf: $(OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: TASKING Linker'
 	ltc $(OBJS) -lrt -lfp_fpu -lcs_fpu  -Oc -Ot -Ox -Oy --map-file="$(@:.elf=.map)" -mc -mf -mi -mk -ml -mm -md -mr -mu --no-warnings= --error-limit=42   -o "$@:elf" --core=mpe:vtc  --lsl-file=../Lcf_Tasking_Tricore_Tc.lsl
 	@echo 'Finished building target: $@'
 	@echo ' '
 
-TC265_uCOS.hex: $(OBJS)
+TC265_uCOS_v2.hex: $(OBJS)
 	@echo 'Invoking: TASKING HEX Generator'
-	ltc $(OBJS) -lrt -lfp_fpu -lcs_fpu   -o "TC265_uCOS.hex:IHEX" -OtcxyL --core=mpe:vtc --lsl-file=../Lcf_Tasking_Tricore_Tc.lsl
+	ltc $(OBJS) -lrt -lfp_fpu -lcs_fpu   -o "TC265_uCOS_v2.hex:IHEX" -OtcxyL --core=mpe:vtc --lsl-file=../Lcf_Tasking_Tricore_Tc.lsl
 	@echo 'Finished building: $@'
 	@echo ' '
 
-TC265_uCOS.siz: TC265_uCOS.elf
+TC265_uCOS_v2.siz: TC265_uCOS_v2.elf
 	@echo 'Invoking: Print Size'
-	elfsize  "TC265_uCOS.elf"
+	elfsize  "TC265_uCOS_v2.elf"
 	@echo 'Finished building: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(EXECUTABLES)$(OBJS)$(SECONDARY_SIZE)$(COMPILED_SRCS)$(C_DEPS) TC265_uCOS.elf
+	-$(RM) $(EXECUTABLES)$(OBJS)$(SECONDARY_SIZE)$(COMPILED_SRCS)$(C_DEPS) TC265_uCOS_v2.elf
 	-@echo ' '
 
 secondary-outputs: $(EXECUTABLES) $(SECONDARY_SIZE)

@@ -102,4 +102,11 @@ Libraries/iLLD/TC26B/Tricore/_Impl \
 Libraries/iLLD/TC26B/Tricore/_Lib/DataHandling \
 Libraries/iLLD/TC26B/Tricore/_Lib/InternalMux \
 Libraries/iLLD/TC26B/Tricore/_PinMap \
+OS/EvalBoards/Micrium/uC-Eval-STM32F107/BSP \
+OS/EvalBoards/Micrium/uC-Eval-STM32F107/uCOS-III \
+OS/uC-CPU/ARM-Cortex-M3/RealView \
+OS/uC-CPU \
+OS/uC-LIB \
+OS/uCOS-III/Ports/ARM-Cortex-M3/Generic/RealView \
+OS/uCOS-III/Source \
 

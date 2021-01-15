@@ -7,12 +7,12 @@
 *
 *               All rights reserved.  Protected by international copyright laws.
 *
-*               uC/LIB is provided in source form to registered licensees ONLY.  It is 
-*               illegal to distribute this source code to any third party unless you receive 
-*               written permission by an authorized Micrium representative.  Knowledge of 
+*               uC/LIB is provided in source form to registered licensees ONLY.  It is
+*               illegal to distribute this source code to any third party unless you receive
+*               written permission by an authorized Micrium representative.  Knowledge of
 *               the source code may NOT be used to develop a similar product.
 *
-*               Please help us continue to provide the Embedded community with the finest 
+*               Please help us continue to provide the Embedded community with the finest
 *               software available.  Your honesty is greatly appreciated.
 *
 *               You can contact us at www.micrium.com.
@@ -87,7 +87,7 @@
 */
 
                                                         /* Configure assembly-optimized function(s) [see Note #1] :     */
-#define  LIB_MEM_CFG_OPTIMIZE_ASM_EN    DEF_ENABLED
+#define  LIB_MEM_CFG_OPTIMIZE_ASM_EN    DEF_DISABLED
                                                         /*   DEF_DISABLED     Assembly-optimized function(s) DISABLED   */
                                                         /*   DEF_ENABLED      Assembly-optimized function(s) ENABLED    */
 
@@ -103,7 +103,7 @@
 *               (b) Configure LIB_MEM_CFG_HEAP_BASE_ADDR to specify a base address for heap memory :
 *
 *                   (1) Heap initialized to specified application memory,  if LIB_MEM_CFG_HEAP_BASE_ADDR
-*                                                                                 #define'd in 'app_cfg.h'; 
+*                                                                                 #define'd in 'app_cfg.h';
 *                                                                          CANNOT #define to address 0x0
 *
 *                   (2) Heap declared to Mem_Heap[] in 'lib_mem.c',        if LIB_MEM_CFG_HEAP_BASE_ADDR
@@ -139,7 +139,7 @@
 *
 * Note(s) : (1) Configure LIB_STR_CFG_FP_EN to enable/disable floating point string function(s).
 *
-*           (2) Configure LIB_STR_CFG_FP_MAX_NBR_DIG_SIG to configure the maximum number of significant 
+*           (2) Configure LIB_STR_CFG_FP_MAX_NBR_DIG_SIG to configure the maximum number of significant
 *               digits to calculate &/or display for floating point string function(s).
 *
 *               See also 'lib_str.h  STRING FLOATING POINT DEFINES  Note #1'.

@@ -16,9 +16,9 @@
 *
 * LICENSING TERMS:
 * ---------------
-*             uC/OS-III is provided in source form to registered licensees ONLY.  It is 
-*             illegal to distribute this source code to any third party unless you receive 
-*             written permission by an authorized Micrium representative.  Knowledge of 
+*             uC/OS-III is provided in source form to registered licensees ONLY.  It is
+*             illegal to distribute this source code to any third party unless you receive
+*             written permission by an authorized Micrium representative.  Knowledge of
 *             the source code may NOT be used to develop a similar product.
 *
 *             Please help us continue to provide the Embedded community with the finest
@@ -45,7 +45,142 @@ const  CPU_CHAR  *os_cpu_c__c = "$Id: $";
 *********************************************************************************************************
 */
 
-#include  <os.h>
+#include "includes.h"
+#include "Bsp.h"
+#include "IfxPort.h"
+#include "IfxStm.h"
+#include "IfxCpu_reg.h"
+#include "SysSe/Bsp/Bsp.h"
+
+/*------------------------------------------------------------------------------------------------*/
+/*!
+* \brief                      INITIAL TASK PSW
+*
+*           This define holds the initial PSW value for a new created task:
+*           (PRS=0, IO privilege = USER1, CDE=0,  CDC=0)
+*/
+/*------------------------------------------------------------------------------------------------*/
+#define OS_INIT_TASK_PSW         0x00000880u
+
+/*------------------------------------------------------------------------------------------------*/
+/*!
+* \brief                      PCXI ADDRESS
+*
+*           This define holds the short address for PCXI register.
+*/
+/*------------------------------------------------------------------------------------------------*/
+#define SYS_TASKS_MAX_NUM   5
+static volatile OS_TCB_CTX_EXT SysTaskExt[SYS_TASKS_MAX_NUM];  /* TCB Extensions for all tasks           */
+static OS_TCB                  OSTCBDummy;              /* dummy TCB for 1st task switch          */
+static volatile OS_TCB_CTX_EXT OSTCBDummyExt;           /* dummy TCB extension                    */
+
+typedef struct _OS_UCX          /* TC upper context structure */
+{
+  CPU_INT32U      _PCXI;            /* upper context PCXI         */
+  CPU_INT32U      _PSW;             /* upper context PSW          */
+  CPU_INT32U*     _A10;             /* upper context A10 (SP)     */
+  CPU_INT32U*     _A11;             /* upper context A11 (RA)     */
+  CPU_INT32U      _D8;              /* upper context D8           */
+  CPU_INT32U      _D9;              /* upper context D9           */
+  CPU_INT32U      _D10;             /* upper context D10          */
+  CPU_INT32U      _D11;             /* upper context D11          */
+  CPU_INT32U*     _A12;             /* upper context A12          */
+  CPU_INT32U*     _A13;             /* upper context A13          */
+  CPU_INT32U*     _A14;             /* upper context A14          */
+  CPU_INT32U*     _A15;             /* upper context A15          */
+  CPU_INT32U      _D12;             /* upper context D12          */
+  CPU_INT32U      _D13;             /* upper context D13          */
+  CPU_INT32U      _D14;             /* upper context D14          */
+  CPU_INT32U      _D15;             /* upper context D15          */
+} OS_UCX;
+
+typedef struct _OS_LCX          /* TC lower context structure */
+{
+  CPU_INT32U      _PCXI;            /* lower context PCXI         */
+  CPU_INT32U*     _PC;              /* lower context saved PC     */
+  CPU_INT32U*     _A2;              /* lower context A2           */
+  CPU_INT32U*     _A3;              /* lower context A3           */
+  CPU_INT32U      _D0;              /* lower context D0           */
+  CPU_INT32U      _D1;              /* lower context D1           */
+  CPU_INT32U      _D2;              /* lower context D2           */
+  CPU_INT32U      _D3;              /* lower context D3           */
+  CPU_INT32U*     _A4;              /* lower context A4           */
+  CPU_INT32U*     _A5;              /* lower context A5           */
+  CPU_INT32U*     _A6;              /* lower context A6           */
+  CPU_INT32U*     _A7;              /* lower context A7           */
+  CPU_INT32U      _D4;              /* lower context D4           */
+  CPU_INT32U      _D5;              /* lower context D5           */
+  CPU_INT32U      _D6;              /* lower context D6           */
+  CPU_INT32U      _D7;              /* lower context D7           */
+} OS_LCX;
+
+/*
+****************************************************************************************************
+*                                 MODULE INTERNAL PROTOTYPES
+****************************************************************************************************
+*/
+
+//static inline void*   OSCTXToAddr       (CPU_INT32U ctx);
+static inline OS_UCX* OSCreateUCX       (void);
+static inline OS_LCX* OSCreateLCX       (void);
+static inline CPU_INT32U  OSRemoveContext   (CPU_INT32U removePCXI);
+static inline void    OSResumeExecution (void);
+
+
+/*
+****************************************************************************************************
+*                                 MODULE INTERNAL FUNCTIONS
+****************************************************************************************************
+*/
+
+/*------------------------------------------------------------------------------------------------*/
+/*! \brief    convert TriCore context pointer (PCXI, FXC, LCX) into physical address
+*
+*   \param    ctx     TriCore context pointer
+*
+*   \return   Pointer to physical CTX address
+*/
+/*------------------------------------------------------------------------------------------------*/
+//static inline void* OSCTXToAddr (CPU_INT32U ctx)
+//{
+//    void *ptrctx;                                     /* context address                          */
+//
+//    __asm(" extr.u d15, %1, #16, #4                   ; calc. physical address from para. ctx   \n"\
+//          " sh     d15, d15, #28                                                                \n"\
+//          " insert %1, d15, %1, #6, #16                                                         \n"\
+//          " mov.a  %0, %1                             ; ptrctx = address                        \n"
+//          : "=a" (ptrctx) : "d" (ctx) : "d15");
+//
+//    return ptrctx;                                    /* return CTX physical address              */
+//}
+#define GET_PHYS_ADDRESS(effectiveAddr)   ((uint32)((uint32)(effectiveAddr & 0xF0000u) << 12u) | \
+                                           (uint32)((uint32)(effectiveAddr & 0xFFFFu) << 6u))
+
+#define GET_EFFECTIVE_ADDRESS(physAddr)   ((uint32)((uint32)(physAddr & 0xF0000000u) >> 12u) | \
+                                           (uint32)((uint32)(physAddr & 0x003FFFC0u) >> 6u))
+
+#define PCXI_PCX_OFFSET       (0u)
+#define PCXI_PCX_MASK         (0xFFFFFu << PCXI_PCX_OFFSET)
+
+#define PCXI_UL_OFFSET        (20u)
+#define PCXI_UL_MASK          (1u << PCXI_UL_OFFSET)
+#define PCXI_UL_UPPER_CTX     (PCXI_UL_MASK)
+#define PCXI_UL_LOWER_CTX     (0u)
+
+#define PCXI_PIE_OFFSET       (21u)
+#define PCXI_PIE_MASK         (1u << PCXI_PIE_OFFSET)
+#define PCXI_PIE_ENABLED      (PCXI_PIE_MASK)
+#define PCXI_PIE_DISABLED     (0u)
+
+#define PCXI_PCPN_OFFSET      (22u)
+#define PCXI_PCPN_MASK        (0xFFu << PCXI_PCPN_OFFSET)
+
+/** \brief Create PCXI value for and upper task context */
+#define GET_UPPER_CTX_LINK(link)  (((uint32)(link & PCXI_PCX_MASK)) | PCXI_UL_UPPER_CTX | PCXI_PIE_ENABLED)
+
+/** \brief Create PCXI value for and lower task context */
+#define GET_LOWER_CTX_LINK(link)  (((uint32)(link & PCXI_PCX_MASK)) | PCXI_UL_LOWER_CTX | PCXI_PIE_ENABLED)
+
 
 /*
 *********************************************************************************************************
@@ -137,11 +272,30 @@ void  OSStatTaskHook (void)
 void  OSTaskCreateHook (OS_TCB  *p_tcb)
 {
 #if OS_CFG_APP_HOOKS_EN > 0u
-    if (OS_AppTaskCreateHookPtr != (OS_APP_HOOK_TCB)0) {
+
+    /*if (OS_AppTaskCreateHookPtr != (OS_APP_HOOK_TCB)0) {
         (*OS_AppTaskCreateHookPtr)(p_tcb);
+    }*/
+
+    volatile OS_TCB_CTX_EXT *ext;                           /* Pointer to TCB extension                   */
+    if(p_tcb->ExtPtr == (void *)0){
+        ext = SysTaskExt;                                   /* search for free TCB extension              */
+        while ((ext < &SysTaskExt[SYS_TASKS_MAX_NUM]) &&    /* Loop through TCB extension list            */
+               ((ext->TaskPCXI) != 0)) {                    /* PCXI = 0 indicates unused extension        */
+            ext++;                                          /* switch to next TCB extension               */
+        }                                                   /*--------------------------------------------*/
+        if (ext < &SysTaskExt[SYS_TASKS_MAX_NUM]) {         /* see, if valid TCB extension is found:      */
+            ext->TaskPCXI = *(p_tcb->StkPtr);               /* PCXI -> Link to Task Lower Context         */
+            p_tcb->ExtPtr = (void *)ext;                    /* Link extension to TCB                      */
+        }
     }
+    else{
+        ext = p_tcb->ExtPtr;
+        ext->TaskPCXI = *(p_tcb->StkPtr);                   /* Link extension to TCB                      */
+    }
+
 #else
-    (void)p_tcb;                                            /* Prevent compiler warning                               */
+    (void)p_tcb;                                      /* Prevent compiler warning                               */
 #endif
 }
 
@@ -162,9 +316,19 @@ void  OSTaskCreateHook (OS_TCB  *p_tcb)
 void  OSTaskDelHook (OS_TCB  *p_tcb)
 {
 #if OS_CFG_APP_HOOKS_EN > 0u
-    if (OS_AppTaskDelHookPtr != (OS_APP_HOOK_TCB)0) {
+    /*if (OS_AppTaskDelHookPtr != (OS_APP_HOOK_TCB)0) {
         (*OS_AppTaskDelHookPtr)(p_tcb);
+    }*/
+    volatile OS_TCB_CTX_EXT *ext;                     /* Pointer to TCB extension                   */
+                                                      /*--------------------------------------------*/
+    ext=(volatile OS_TCB_CTX_EXT *)p_tcb->ExtPtr;     /* get pointer to TCB extension               */
+    if (ext != 0) {                                   /* see, if valid TCB extension is linked:     */
+        ext->TaskPCXI     = 0;                        /* free TCB extension -> unlink task context  */
+        p_tcb->ExtPtr = (void *)0;                    /* Remove extension link from TCB             */
     }
+
+
+
 #else
     (void)p_tcb;                                            /* Prevent compiler warning                               */
 #endif
@@ -195,7 +359,6 @@ void  OSTaskReturnHook (OS_TCB  *p_tcb)
     (void)p_tcb;                                            /* Prevent compiler warning                               */
 #endif
 }
-
 
 /*$PAGE*/
 /*
@@ -234,29 +397,34 @@ CPU_STK  *OSTaskStkInit (OS_TASK_PTR    p_task,
                          OS_OPT         opt)
 {
     CPU_STK  *p_stk;
+    OS_UCX* UpperCtx;
+    CPU_INT32U UpperCtxLink;
+    OS_LCX* LowerCtx;
+    CPU_INT32U LowerCtxLink;
+
+    p_stk = &p_stk_base[stk_size - 1];                          /* Load stack pointer                                     */
 
 
-    (void)opt;                                              /* Prevent compiler warning                               */
+    /* Unlink next two context's */
+    UpperCtxLink = __mfcr(CPU_FCX);
+    UpperCtx = (OS_UCX*)GET_PHYS_ADDRESS(UpperCtxLink);
 
-    p_stk = &p_stk_base[stk_size];                          /* Load stack pointer                                     */
-                                                            /* Registers stacked as if auto-saved on exception        */
-    *--p_stk = (CPU_STK)0x01000000u;                        /* xPSR                                                   */
-    *--p_stk = (CPU_STK)p_task;                             /* Entry Point                                            */
-    *--p_stk = (CPU_STK)OS_TaskReturn;                      /* R14 (LR)                                               */
-    *--p_stk = (CPU_STK)0x12121212u;                        /* R12                                                    */
-    *--p_stk = (CPU_STK)0x03030303u;                        /* R3                                                     */
-    *--p_stk = (CPU_STK)0x02020202u;                        /* R2                                                     */
-    *--p_stk = (CPU_STK)p_stk_limit;                        /* R1                                                     */
-    *--p_stk = (CPU_STK)p_arg;                              /* R0 : argument                                          */
-                                                            /* Remaining registers saved on process stack             */
-    *--p_stk = (CPU_STK)0x11111111u;                        /* R11                                                    */
-    *--p_stk = (CPU_STK)0x10101010u;                        /* R10                                                    */
-    *--p_stk = (CPU_STK)0x09090909u;                        /* R9                                                     */
-    *--p_stk = (CPU_STK)0x08080808u;                        /* R8                                                     */
-    *--p_stk = (CPU_STK)0x07070707u;                        /* R7                                                     */
-    *--p_stk = (CPU_STK)0x06060606u;                        /* R6                                                     */
-    *--p_stk = (CPU_STK)0x05050505u;                        /* R5                                                     */
-    *--p_stk = (CPU_STK)0x04040404u;                        /* R4                                                     */
+    LowerCtxLink = UpperCtx->_PCXI;
+    LowerCtx = (OS_LCX*)GET_PHYS_ADDRESS(LowerCtxLink);
+
+    __mtcr(CPU_FCX, LowerCtx->_PCXI);
+
+    /* Update context links */
+    UpperCtx->_PCXI = FALSE;  /* Last context of the task => report error if returns */
+    UpperCtx->_A10 = (CPU_INT32U*)p_stk;;
+    UpperCtx->_A11 = OS_TaskReturn;
+    UpperCtx->_PSW = OS_INIT_TASK_PSW;
+
+    LowerCtx->_PCXI = GET_UPPER_CTX_LINK(UpperCtxLink);
+    LowerCtx->_PC   = (CPU_INT32U*)p_task;
+    LowerCtx->_A4   = (CPU_INT32U*)p_arg;
+
+    *p_stk = GET_LOWER_CTX_LINK(LowerCtxLink);
 
     return (p_stk);
 }
@@ -345,67 +513,149 @@ void  OSTimeTickHook (void)
 #endif
 }
 
-
-/*$PAGE*/
-/*
-*********************************************************************************************************
-*                                          SYS TICK HANDLER
+/*------------------------------------------------------------------------------------------------*/
+/*! \brief    remove upper/lower context from previous context list
 *
-* Description: Handle the system tick (SysTick) interrupt, which is used to generate the uC/OS-II tick
-*              interrupt.
+*   \param    RemovePCXI PCXI pointer to context to be removed
 *
-* Arguments  : None.
-*
-* Note(s)    : 1) This function MUST be placed on entry 15 of the Cortex-M3 vector table.
-*********************************************************************************************************
+*   \return   PCXI pointer to next context
 */
+/*------------------------------------------------------------------------------------------------*/
+//static inline CPU_INT32U OSRemoveContext(CPU_INT32U removePCXI)
+//{
+//    CPU_INT32U nextPCXI;
+//
+//    __asm ("   mfcr    d14, #PCXI                     ; store current PCXI in D14               \n"\
+//           "   mtcr    #(PCXI), %1                    ; PCXI register = RemovePCXI              \n"\
+//           "   extr.u  d15, %1, #16, #4               ; calc. physical address                  \n"\
+//           "   sh      d15, d15, #28                  ; from RemovePCXI                         \n"\
+//           "   insert  d15, d15, %1, #6, #16          ; store PCXI address in D15               \n"\
+//           "   mov.a   a15, d15                       ; store PCXI address in A15               \n"\
+//           "   ld.w    d13, [a15]0                    ; store next PCXI in D13                  \n"\
+//           "   jz.t    %1:22, a                       ; if lower context, jump to label 1:      \n"\
+//           "   stucx   [a15]0                         ; copy ucx registers to remove PCX        \n"\
+//           "   st.w    [a15]0, d13                    ; restore next PCXI                       \n"\
+//           "   movh.a  a11, #@his(b)                  ; setup return address                    \n"\
+//           "   lea     a11, [a11]@los(b)              ; in A11 (label 2:)                       \n"\
+//           "   ret                                    ; restore upper context                   \n"\
+//           "a: stlcx   [a15]0                         ; copy lcx registers to remove PCX        \n"\
+//           "   st.a    [a15]4, a11                    ; workaround CPU TC.067                   \n"\
+//           "   st.w    [a15]0, d13                    ; restore next PCXI                       \n"\
+//           "   rslcx                                  ; restore lower context                   \n"\
+//           "b: mtcr    #(PCXI), d14                   ; restore PCXI register                   \n"\
+//           "   mov     %0, d13                        ; return next PCXI                        \n"\
+//           : "=d" (nextPCXI) : "d" (removePCXI) : "a15", "d13", "d14", "d15");
+//
+//   return nextPCXI;
+//}
 
-void  OS_CPU_SysTickHandler (void)
+/*------------------------------------------------------------------------------------------------*/
+/*! \brief    resume execution of task
+*
+*   \note     the PCXI value of the previous context holds the new task PCXI context pointer
+*/
+/*------------------------------------------------------------------------------------------------*/
+static inline void OSResumeExecution(void)
 {
-    CPU_SR_ALLOC();
+    __asm ("   movh.a  a11,#@his(d)                   ; setup return address (label d:)         \n"\
+           "   lea     a11,[a11]@los(d)               ; in A11                                  \n"\
+           "   ret                                    ; restore context from call to OSCtxSw    \n"\
+           "d: rslcx                                  ; restore lower task context              \n"\
+           "   nop                                    ; bugfix: TC.069                          \n"\
+           "   rfe                                    ; restore upper context and run task      \n"\
+           : /* no outputs */ : /* no inputs */ : "a11");
+}
+/*------------------------------------------------------------------------------------------------*/
+/*! \brief             START OS AND ACTIVATE FIRST TASK
+*
+*          This function also installs the timer ISR and dispatcher trap \n
+*/
+/*------------------------------------------------------------------------------------------------*/
+void OSStartHighRdy(void)
+{
+    OSRunning = TRUE;                                 /* OS is now running                        */
 
+    OSTCBDummy.ExtPtr = (void*)&OSTCBDummyExt;          /* setup dummy TCB                          */
+    OSTCBCurPtr = &OSTCBDummy;                          /* dummy TCB for 1st context switch         */
 
-    CPU_CRITICAL_ENTER();
-    OSIntNestingCtr++;                                      /* Tell uC/OS-III that we are starting an ISR             */
-    CPU_CRITICAL_EXIT();
-
-    OSTimeTick();                                           /* Call uC/OS-III's OSTimeTick()                          */
-
-    OSIntExit();                                            /* Tell uC/OS-III that we are leaving the ISR             */
+    OS_TASK_SW();                                     /* request a task switch to highest prio    */
 }
 
-
-/*$PAGE*/
-/*
-*********************************************************************************************************
-*                                         INITIALIZE SYS TICK
+/*------------------------------------------------------------------------------------------------*/
+/*! \brief             TASK CONTEXT SWITCH
 *
-* Description: Initialize the SysTick.
+*          In this uCOS implementation the dispatcher is invoked by a software trap or via
+*          OSIntCtxSw from interrupt it can be requested with the macro OS_TASK_SW()
 *
-* Arguments  : cnts         Number of SysTick counts between two OS tick interrupts.
-*
-* Note(s)    : 1) This function MUST be called after OSStart() & after processor initialization.
-*********************************************************************************************************
+* \note    the interrupt / trap vector code has to save the upper and (!) lower context of the
+*          interrupted task, then this function is invoked by a call (no jump or jump and link
+*          instructions!)
 */
-
-void  OS_CPU_SysTickInit (CPU_INT32U  cnts)
+/*------------------------------------------------------------------------------------------------*/
+void OSCtxSw(void)
 {
-    CPU_INT32U  prio;
+    volatile OS_TCB_CTX_EXT *ext;                     /* pointer to TCB extension                 */
+                                                      /*------------------------------------------*/
+    __dsync();                                        /* synchronize all data accesses            */
 
+    /* get pointer to previous context (= current task context)                                   */
+    /* because OSCtxSw is reached via a call command from ISR vector / trap handler               */
+    /* current PCXI register points to one additional upper context where we can find the         */
+    /* current task context pointer:                                                              */
+    OS_UCX* ptUpperCTX = (OS_UCX*)GET_PHYS_ADDRESS((__mfcr(CPU_PCXI)));
 
-    CPU_REG_NVIC_ST_RELOAD = cnts - 1u;
+    ext = (volatile OS_TCB_CTX_EXT*)OSTCBCurPtr->ExtPtr;
 
-                                                            /* Set SysTick handler prio.                              */
-    prio  = CPU_REG_NVIC_SHPRI3;
-    prio &= DEF_BIT_FIELD(24, 0);
-    prio |= DEF_BIT_MASK(OS_CPU_CFG_SYSTICK_PRIO, 24);
+    if (ext == (volatile OS_TCB_CTX_EXT*)0) {         /* no TCB extension; task has been deleted  */
+        CPU_INT32U prevLink = __mfcr(CPU_FCX);
+        CPU_INT32U currLink = __mfcr(CPU_PCXI);
+        while (ptUpperCTX->_PCXI != 0u)
+        {
+          CPU_INT32U tmpLink = ptUpperCTX->_PCXI;
+          ptUpperCTX->_PCXI = prevLink;
+          prevLink = currLink;
+          currLink = tmpLink;
+          ptUpperCTX = (OS_UCX*)GET_PHYS_ADDRESS(currLink);
+        }
+    } else {                                          /* store current context pointer in TCB     */
+        ext->TaskPCXI = ptUpperCTX->_PCXI;
+    }
 
-    CPU_REG_NVIC_SHPRI3 = prio;
+    OSTaskSwHook();                                   /* call user funktion for any task switch   */
 
-                                                            /* Enable timer.                                          */
-    CPU_REG_NVIC_ST_CTRL |= CPU_REG_NVIC_ST_CTRL_CLKSOURCE |
-                            CPU_REG_NVIC_ST_CTRL_ENABLE;
-                                                            /* Enable timer interrupt.                                */
-    CPU_REG_NVIC_ST_CTRL |= CPU_REG_NVIC_ST_CTRL_TICKINT;
+    OSTCBCurPtr = OSTCBHighRdyPtr;                    /* new highest prio task is current task    */
+    OSPrioCur = OSPrioHighRdy;                        /* new highest prio is now current prio     */
+
+    ext = (volatile OS_TCB_CTX_EXT*)OSTCBCurPtr->ExtPtr;
+    ptUpperCTX->_PCXI = ext->TaskPCXI;                /* restore new task context pointer         */
+    OSResumeExecution();                              /* resume execution of highest prio. task   */
+
 }
+
+/*------------------------------------------------------------------------------------------------*/
+/*! \brief             TASK SWITCH FROM INTERRUPT
+*
+*          This function restores the context from the previous calls and jumps to OSCtxSw().
+*          OSCtxSw() is invoked by a jump because there is still one upper context left on
+*          the previous context list from the call to the interrupt handler
+*
+* \note    This function is used only inside OSIntExit().
+*          OSIntExit() is located at the very end of interrupt handlers.
+*
+* \note    Interrupt vector code has to save the upper and (!) lower context of the interrupted
+*          task and invoke the interrupt handler via a call command.
+*/
+/*------------------------------------------------------------------------------------------------*/
+void OSIntCtxSw(void)
+{
+    __asm ("    movh.a  a11,#@his(j1)                  ; setup return address (label j1:)        \n"\
+           "    lea     a11,[a11]@los(j1)              ; in A11                                  \n"\
+           "    ret                                    ; remove context from call to OSIntCtxSw  \n"\
+           "j1: movh.a  a11,#@his(j2)                  ; setup return address (label j2:)        \n"\
+           "    lea     a11,[a11]@los(j2)              ; in A11                                  \n"\
+           "    ret                                    ; remove context from call to OSIntExit   \n"\
+           "j2: j       OSCtxSw                        ; jump to OSCtxSw()                       \n"\
+           : /* no outputs */ : /* no inputs */ : "a11");
+}
+
 
