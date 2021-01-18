@@ -3,7 +3,7 @@
 #include "IfxPort_Io.h"
 #include "os_cpu.h"
 
-IFX_INLINE SysCallExtensionHook(IfxCpu_Trap trapInfo)
+IFX_INLINE void SysCallExtensionHook(IfxCpu_Trap trapInfo)
 {
     switch (trapInfo.tId)
     {

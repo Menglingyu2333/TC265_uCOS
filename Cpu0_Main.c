@@ -143,6 +143,9 @@ static  void    AppTaskCreate (void);
 static  void    AppObjCreate  (void);
 static  void    AppTaskStart  (void *p_arg);
 static  void    BSP_Init(void);
+void    PeriodicTimerTask(OS_TMR *p_tmr, void *p_arg);
+OS_TMR  TaskTimer1;
+OS_SEM  Sem1;
 
 int core0_main(void)
 {
@@ -159,10 +162,10 @@ int core0_main(void)
     IfxCpu_emitEvent(&g_cpuSyncEvent);
     IfxCpu_waitEvent(&g_cpuSyncEvent, 1);
 
-//    IfxCpu_disableInterrupts();     //BSP_IntDisAll();          /* Disable all interrupts.                              */
+    IfxCpu_disableInterrupts();     //BSP_IntDisAll();          /* Disable all interrupts.                              */
     BSP_Init();
 
-    OS_CPU_SysTickInit((TimeConst_1s)/OSCfg_TickRate_Hz);                                   /* Init uC/OS periodic time src (SysTick).              */
+    OS_CPU_SysTickInit((CPU_INT32U)(TimeConst_1s)/OSCfg_TickRate_Hz);                                   /* Init uC/OS periodic time src (SysTick).              */
 
     OSInit(&err);                                               /* Init uC/OS-III.                                      */
 
@@ -272,6 +275,7 @@ void AppTask1 ()
                       &err);
         IfxPort_togglePin(&MODULE_P14, 9);
         CAN_SendSingle(&canMsgObj0, 0x102, 0x0000, 0x0000);
+        OSSemPost(&Sem1, OS_OPT_POST_1, &err);
     }
 }
 
@@ -298,13 +302,18 @@ void AppTask2 ()
     CAN_SendSingle(&canMsgObj0, 0x201, 0x0000, 0x0000);
 
     while (TRUE) {
-        OSTimeDlyHMSM(0, 0, 0, 203,
-                      OS_OPT_TIME_HMSM_STRICT,
-                      &err);
-        CAN_SendSingle(&canMsgObj0, 0x202, 0x0000, 0x0000);
+//        OSTimeDlyHMSM(0, 0, 0, 203,
+//                      OS_OPT_TIME_HMSM_STRICT,
+//                      &err);
+        OSSemPend(&Sem1, 0, OS_OPT_PEND_BLOCKING, NULL_PTR, &err);
+        CAN_SendSingle(&canMsgObj1, 0x202, 0x0000, 0x0000);
     }
 }
 
+void PeriodicTimerTask(OS_TMR *p_tmr, void *p_arg)
+{
+    CAN_SendSingle(&canMsgObj1, 0x301, 0x0000, 0x0000);
+}
 /*
 *********************************************************************************************************
 *                                      CREATE APPLICATION TASKS
@@ -365,5 +374,10 @@ static  void  AppTaskCreate (void)
 
 static  void  AppObjCreate (void)
 {
+    OS_ERR err;
+    OSTmrCreate(&TaskTimer1, &"Timer 1", 0, 7, OS_OPT_TMR_PERIODIC, PeriodicTimerTask, (void *)0, &err);
+    OSTmrStart(&TaskTimer1, &err);
+
+    OSSemCreate(&Sem1, &"Sem1", 1, &err);
 }
 

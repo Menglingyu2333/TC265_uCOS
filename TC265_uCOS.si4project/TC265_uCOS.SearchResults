@@ -1,5 +1,27 @@
----- __CSA0 Matches (0 in 0 files) ----
----- __CSA0 Search Errors Encountered (60) ----
+---- CPU_CFG_LEAD_ZEROS_ASM_PRESENT Matches (22 in 4 files) ----
+cpu.h (OS\uC-CPU\ARM-Cortex-M3\RealView) line 419 : * Note(s) : (1) (a) Configure CPU_CFG_LEAD_ZEROS_ASM_PRESENT  to define count leading  zeros bits
+cpu.h (OS\uC-CPU\ARM-Cortex-M3\RealView) line 422 : *                   (1) 'cpu_a.asm',  if CPU_CFG_LEAD_ZEROS_ASM_PRESENT       #define'd in 'cpu.h'/
+cpu.h (OS\uC-CPU\ARM-Cortex-M3\RealView) line 425 : *                   (2) 'cpu_core.c', if CPU_CFG_LEAD_ZEROS_ASM_PRESENT   NOT #define'd in 'cpu.h'/
+cpu.h (OS\uC-CPU\ARM-Cortex-M3\RealView) line 440 : #define  CPU_CFG_LEAD_ZEROS_ASM_PRESENT                         /* ... assembly-version (see Note #1a).                 */
+cpu_cfg.h (OS\EvalBoards\Micrium\uC-Eval-STM32F107\uCOS-III) line 148 : * Note(s) : (1) Configure CPU_CFG_LEAD_ZEROS_ASM_PRESENT to prototype/define count leading zeros bits
+cpu_cfg.h (OS\EvalBoards\Micrium\uC-Eval-STM32F107\uCOS-III) line 151 : *               (a) 'cpu.h'/'cpu_a.asm',       if CPU_CFG_LEAD_ZEROS_ASM_PRESENT      #define'd in 'cpu.h'/
+cpu_cfg.h (OS\EvalBoards\Micrium\uC-Eval-STM32F107\uCOS-III) line 154 : *               (b) 'cpu_core.h'/'cpu_core.c', if CPU_CFG_LEAD_ZEROS_ASM_PRESENT  NOT #define'd in 'cpu.h'/
+cpu_cfg.h (OS\EvalBoards\Micrium\uC-Eval-STM32F107\uCOS-III) line 163 : #define  CPU_CFG_LEAD_ZEROS_ASM_PRESENT                         /* ... assembly-version (see Note #1).                  */
+cpu_core.c (OS\uC-CPU) line 94 : #if (!(defined(CPU_CFG_LEAD_ZEROS_ASM_PRESENT)) || \
+cpu_core.c (OS\uC-CPU) line 1144 : #ifndef   CPU_CFG_LEAD_ZEROS_ASM_PRESENT
+cpu_core.c (OS\uC-CPU) line 1212 : #if  (!((defined(CPU_CFG_LEAD_ZEROS_ASM_PRESENT)) && \
+cpu_core.c (OS\uC-CPU) line 1219 : #if ((defined(CPU_CFG_LEAD_ZEROS_ASM_PRESENT)) && \
+cpu_core.c (OS\uC-CPU) line 1280 : #if  (!((defined(CPU_CFG_LEAD_ZEROS_ASM_PRESENT)) && \
+cpu_core.c (OS\uC-CPU) line 1287 : #if ((defined(CPU_CFG_LEAD_ZEROS_ASM_PRESENT)) && \
+cpu_core.c (OS\uC-CPU) line 1354 : #if  (!((defined(CPU_CFG_LEAD_ZEROS_ASM_PRESENT)) && \
+cpu_core.c (OS\uC-CPU) line 1361 : #if ((defined(CPU_CFG_LEAD_ZEROS_ASM_PRESENT)) && \
+cpu_core.c (OS\uC-CPU) line 1442 : #if  (!((defined(CPU_CFG_LEAD_ZEROS_ASM_PRESENT)) && \
+cpu_core.c (OS\uC-CPU) line 1449 : #if ((defined(CPU_CFG_LEAD_ZEROS_ASM_PRESENT)) && \
+cpu_core.h (OS\uC-CPU) line 494 : *                   (1) 'cpu_a.asm',  if CPU_CFG_LEAD_ZEROS_ASM_PRESENT       #define'd in 'cpu.h'/
+cpu_core.h (OS\uC-CPU) line 497 : *                   (2) 'cpu_core.c', if CPU_CFG_LEAD_ZEROS_ASM_PRESENT   NOT #define'd in 'cpu.h'/
+cpu_core.h (OS\uC-CPU) line 963 : #ifndef  CPU_CFG_LEAD_ZEROS_ASM_PRESENT
+cpu_core.h (OS\uC-CPU) line 965 : #error  "CPU_CFG_LEAD_ZEROS_ASM_PRESENT        not #define'd in 'cpu.h'/'cpu_cfg.h'"
+---- CPU_CFG_LEAD_ZEROS_ASM_PRESENT Search Errors Encountered (60) ----
 The following 60 files could not be processed:
 D:\000Files\Infineon\TC265\AurixDS\TC265_uCOS_v2\OS\EvalBoards\Micrium\uC-Eval-STM32F107\BSP\OS\uCOS-III\bsp_os.c : File could not be opened.
 D:\000Files\Infineon\TC265\AurixDS\TC265_uCOS_v2\OS\EvalBoards\Micrium\uC-Eval-STM32F107\BSP\OS\uCOS-III\bsp_os.h : File could not be opened.

@@ -9,12 +9,11 @@ RM := rm -rf
 # All of the sources participating in the build are defined here
 -include sources.mk
 -include OS/uCOS-III/Source/subdir.mk
--include OS/uCOS-III/Ports/ARM-Cortex-M3/Generic/RealView/subdir.mk
+-include OS/uCOS-III/Ports/Tricore/Generic/Tasking/subdir.mk
 -include OS/uC-LIB/subdir.mk
--include OS/uC-CPU/ARM-Cortex-M3/RealView/subdir.mk
+-include OS/uC-CPU/Tricore/Tasking/subdir.mk
 -include OS/uC-CPU/subdir.mk
--include OS/EvalBoards/Micrium/uC-Eval-STM32F107/uCOS-III/subdir.mk
--include OS/EvalBoards/Micrium/uC-Eval-STM32F107/BSP/subdir.mk
+-include OS/EvalBoards/Infineon/Tricore/TC265/subdir.mk
 -include Libraries/iLLD/TC26B/Tricore/_PinMap/subdir.mk
 -include Libraries/iLLD/TC26B/Tricore/_Lib/InternalMux/subdir.mk
 -include Libraries/iLLD/TC26B/Tricore/_Lib/DataHandling/subdir.mk

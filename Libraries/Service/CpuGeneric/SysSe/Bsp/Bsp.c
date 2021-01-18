@@ -115,8 +115,9 @@ IfxStm_CompareConfig g_STMConf;
 void IsrSTM0(void)
 {
     /* Update the compare register value that will trigger the next interrupt and toggle the LED */
-    IfxStm_increaseCompare(BSP_DEFAULT_TIMER, g_STMConf.comparator, ((TimeConst_1s)/OSCfg_TickRate_Hz));
-    IfxPort_togglePin(&MODULE_P14, 9);
+    IfxStm_increaseCompare(BSP_DEFAULT_TIMER, g_STMConf.comparator,
+                          (CPU_INT32U)((TimeConst_1s)/OSCfg_TickRate_Hz));
+//    IfxPort_togglePin(&MODULE_P14, 9);
     OS_CPU_SysTickHandler();
 }
 static void InitSTM0(CPU_INT32U  cnts)

@@ -417,7 +417,7 @@ CPU_STK  *OSTaskStkInit (OS_TASK_PTR    p_task,
     /* Update context links */
     UpperCtx->_PCXI = FALSE;  /* Last context of the task => report error if returns */
     UpperCtx->_A10 = (CPU_INT32U*)p_stk;;
-    UpperCtx->_A11 = OS_TaskReturn;
+    UpperCtx->_A11 = (CPU_STK)OS_TaskReturn;
     UpperCtx->_PSW = OS_INIT_TASK_PSW;
 
     LowerCtx->_PCXI = GET_UPPER_CTX_LINK(UpperCtxLink);
