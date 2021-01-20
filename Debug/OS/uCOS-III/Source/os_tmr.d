@@ -2,6 +2,10 @@
 # Automatically-generated file. Do not edit!
 ################################################################################
 
+################################################################################
+# Automatically-generated file. Do not edit!
+################################################################################
+
 os_tmr.o :	../OS/uCOS-III/Source/os_tmr.c
 ../OS/uCOS-III/Source/os_tmr.c :
 os_tmr.o :	../OS/uCOS-III/Source/os.h

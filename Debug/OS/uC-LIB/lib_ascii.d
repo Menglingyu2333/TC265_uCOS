@@ -2,6 +2,10 @@
 # Automatically-generated file. Do not edit!
 ################################################################################
 
+################################################################################
+# Automatically-generated file. Do not edit!
+################################################################################
+
 lib_ascii.o :	../OS/uC-LIB/lib_ascii.c
 ../OS/uC-LIB/lib_ascii.c :
 lib_ascii.o :	../OS/uC-LIB/lib_ascii.h

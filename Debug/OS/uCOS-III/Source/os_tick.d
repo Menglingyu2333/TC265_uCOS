@@ -2,6 +2,10 @@
 # Automatically-generated file. Do not edit!
 ################################################################################
 
+################################################################################
+# Automatically-generated file. Do not edit!
+################################################################################
+
 os_tick.o :	../OS/uCOS-III/Source/os_tick.c
 ../OS/uCOS-III/Source/os_tick.c :
 os_tick.o :	../OS/uCOS-III/Source/os.h

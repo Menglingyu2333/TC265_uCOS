@@ -2,6 +2,10 @@
 # Automatically-generated file. Do not edit!
 ################################################################################
 
+################################################################################
+# Automatically-generated file. Do not edit!
+################################################################################
+
 os_sem.o :	../OS/uCOS-III/Source/os_sem.c
 ../OS/uCOS-III/Source/os_sem.c :
 os_sem.o :	../OS/uCOS-III/Source/os.h

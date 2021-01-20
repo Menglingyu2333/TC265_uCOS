@@ -2,6 +2,10 @@
 # Automatically-generated file. Do not edit!
 ################################################################################
 
+################################################################################
+# Automatically-generated file. Do not edit!
+################################################################################
+
 os_time.o :	../OS/uCOS-III/Source/os_time.c
 ../OS/uCOS-III/Source/os_time.c :
 os_time.o :	../OS/uCOS-III/Source/os.h

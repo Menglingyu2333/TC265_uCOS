@@ -2,6 +2,10 @@
 # Automatically-generated file. Do not edit!
 ################################################################################
 
+################################################################################
+# Automatically-generated file. Do not edit!
+################################################################################
+
 os_cfg_app.o :	../OS/uCOS-III/Source/os_cfg_app.c
 ../OS/uCOS-III/Source/os_cfg_app.c :
 os_cfg_app.o :	../OS/EvalBoards/Infineon/Tricore/TC265/os_cfg_app.h

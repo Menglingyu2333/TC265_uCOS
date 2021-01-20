@@ -2,6 +2,10 @@
 # Automatically-generated file. Do not edit!
 ################################################################################
 
+################################################################################
+# Automatically-generated file. Do not edit!
+################################################################################
+
 os_flag.o :	../OS/uCOS-III/Source/os_flag.c
 ../OS/uCOS-III/Source/os_flag.c :
 os_flag.o :	../OS/uCOS-III/Source/os.h

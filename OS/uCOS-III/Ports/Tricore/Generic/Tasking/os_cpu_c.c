@@ -120,10 +120,6 @@ typedef struct _OS_LCX          /* TC lower context structure */
 ****************************************************************************************************
 */
 
-//static inline void*   OSCTXToAddr       (CPU_INT32U ctx);
-static inline OS_UCX* OSCreateUCX       (void);
-static inline OS_LCX* OSCreateLCX       (void);
-static inline CPU_INT32U  OSRemoveContext   (CPU_INT32U removePCXI);
 static inline void    OSResumeExecution (void);
 
 
@@ -273,25 +269,8 @@ void  OSTaskCreateHook (OS_TCB  *p_tcb)
 {
 #if OS_CFG_APP_HOOKS_EN > 0u
 
-    /*if (OS_AppTaskCreateHookPtr != (OS_APP_HOOK_TCB)0) {
+    if (OS_AppTaskCreateHookPtr != (OS_APP_HOOK_TCB)0) {
         (*OS_AppTaskCreateHookPtr)(p_tcb);
-    }*/
-
-    volatile OS_TCB_CTX_EXT *ext;                           /* Pointer to TCB extension                   */
-    if(p_tcb->ExtPtr == (void *)0){
-        ext = SysTaskExt;                                   /* search for free TCB extension              */
-        while ((ext < &SysTaskExt[SYS_TASKS_MAX_NUM]) &&    /* Loop through TCB extension list            */
-               ((ext->TaskPCXI) != 0)) {                    /* PCXI = 0 indicates unused extension        */
-            ext++;                                          /* switch to next TCB extension               */
-        }                                                   /*--------------------------------------------*/
-        if (ext < &SysTaskExt[SYS_TASKS_MAX_NUM]) {         /* see, if valid TCB extension is found:      */
-            ext->TaskPCXI = *(p_tcb->StkPtr);               /* PCXI -> Link to Task Lower Context         */
-            p_tcb->ExtPtr = (void *)ext;                    /* Link extension to TCB                      */
-        }
-    }
-    else{
-        ext = p_tcb->ExtPtr;
-        ext->TaskPCXI = *(p_tcb->StkPtr);                   /* Link extension to TCB                      */
     }
 
 #else
@@ -316,18 +295,9 @@ void  OSTaskCreateHook (OS_TCB  *p_tcb)
 void  OSTaskDelHook (OS_TCB  *p_tcb)
 {
 #if OS_CFG_APP_HOOKS_EN > 0u
-    /*if (OS_AppTaskDelHookPtr != (OS_APP_HOOK_TCB)0) {
+    if (OS_AppTaskDelHookPtr != (OS_APP_HOOK_TCB)0) {
         (*OS_AppTaskDelHookPtr)(p_tcb);
-    }*/
-    volatile OS_TCB_CTX_EXT *ext;                     /* Pointer to TCB extension                   */
-                                                      /*--------------------------------------------*/
-    ext=(volatile OS_TCB_CTX_EXT *)p_tcb->ExtPtr;     /* get pointer to TCB extension               */
-    if (ext != 0) {                                   /* see, if valid TCB extension is linked:     */
-        ext->TaskPCXI     = 0;                        /* free TCB extension -> unlink task context  */
-        p_tcb->ExtPtr = (void *)0;                    /* Remove extension link from TCB             */
     }
-
-
 
 #else
     (void)p_tcb;                                            /* Prevent compiler warning                               */
@@ -575,7 +545,6 @@ void OSStartHighRdy(void)
 {
     OSRunning = TRUE;                                 /* OS is now running                        */
 
-    OSTCBDummy.ExtPtr = (void*)&OSTCBDummyExt;          /* setup dummy TCB                          */
     OSTCBCurPtr = &OSTCBDummy;                          /* dummy TCB for 1st context switch         */
 
     OS_TASK_SW();                                     /* request a task switch to highest prio    */
@@ -603,10 +572,12 @@ void OSCtxSw(void)
     /* current PCXI register points to one additional upper context where we can find the         */
     /* current task context pointer:                                                              */
     OS_UCX* ptUpperCTX = (OS_UCX*)GET_PHYS_ADDRESS((__mfcr(CPU_PCXI)));
+    OS_LCX* ptCurTaskLCX = (OS_LCX*)GET_PHYS_ADDRESS(ptUpperCTX->_PCXI);
+    OS_UCX* ptCurTaskUCX = (OS_UCX*)GET_PHYS_ADDRESS(ptCurTaskLCX->_PCXI);
 
-    ext = (volatile OS_TCB_CTX_EXT*)OSTCBCurPtr->ExtPtr;
+    CPU_STK CurTaskStk = (CPU_STK)ptCurTaskUCX->_A10;
 
-    if (ext == (volatile OS_TCB_CTX_EXT*)0) {         /* no TCB extension; task has been deleted  */
+    if(OSTCBCurPtr->TaskState == (OS_STATE)OS_TASK_STATE_DEL){
         CPU_INT32U prevLink = __mfcr(CPU_FCX);
         CPU_INT32U currLink = __mfcr(CPU_PCXI);
         while (ptUpperCTX->_PCXI != 0u)
@@ -617,8 +588,11 @@ void OSCtxSw(void)
           currLink = tmpLink;
           ptUpperCTX = (OS_UCX*)GET_PHYS_ADDRESS(currLink);
         }
-    } else {                                          /* store current context pointer in TCB     */
-        ext->TaskPCXI = ptUpperCTX->_PCXI;
+    }
+    else{
+        CurTaskStk -= 4;
+        OSTCBCurPtr->StkPtr = CurTaskStk;
+        *((typeTaskPCXI*)(OSTCBCurPtr->StkPtr)) = ptUpperCTX->_PCXI;
     }
 
     OSTaskSwHook();                                   /* call user funktion for any task switch   */
@@ -626,8 +600,8 @@ void OSCtxSw(void)
     OSTCBCurPtr = OSTCBHighRdyPtr;                    /* new highest prio task is current task    */
     OSPrioCur = OSPrioHighRdy;                        /* new highest prio is now current prio     */
 
-    ext = (volatile OS_TCB_CTX_EXT*)OSTCBCurPtr->ExtPtr;
-    ptUpperCTX->_PCXI = ext->TaskPCXI;                /* restore new task context pointer         */
+    ptUpperCTX->_PCXI = *((typeTaskPCXI*)(OSTCBCurPtr->StkPtr));
+                                                      /* restore new task context pointer         */
     OSResumeExecution();                              /* resume execution of highest prio. task   */
 
 }

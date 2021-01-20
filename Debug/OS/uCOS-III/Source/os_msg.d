@@ -2,6 +2,10 @@
 # Automatically-generated file. Do not edit!
 ################################################################################
 
+################################################################################
+# Automatically-generated file. Do not edit!
+################################################################################
+
 os_msg.o :	../OS/uCOS-III/Source/os_msg.c
 ../OS/uCOS-III/Source/os_msg.c :
 os_msg.o :	../OS/uCOS-III/Source/os.h

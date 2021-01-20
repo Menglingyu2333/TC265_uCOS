@@ -50,6 +50,7 @@ typedef struct os_tcb_ctx_ext {                       /*!< \brief OS: TriCore TC
     CPU_INT32U TaskPCXI;                                  /*!< \brief OS: ptr to previous tsk context */
 } OS_TCB_CTX_EXT;
 
+typedef CPU_INT32U typeTaskPCXI;
 
 #define  OS_SYSCALL_CTXSW       0
 #define  OS_TASK_SW()           __syscall(OS_SYSCALL_CTXSW)

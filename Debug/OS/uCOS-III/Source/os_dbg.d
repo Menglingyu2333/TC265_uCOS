@@ -2,6 +2,10 @@
 # Automatically-generated file. Do not edit!
 ################################################################################
 
+################################################################################
+# Automatically-generated file. Do not edit!
+################################################################################
+
 os_dbg.o :	../OS/uCOS-III/Source/os_dbg.c
 ../OS/uCOS-III/Source/os_dbg.c :
 os_dbg.o :	../OS/uCOS-III/Source/os.h

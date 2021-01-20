@@ -2,6 +2,10 @@
 # Automatically-generated file. Do not edit!
 ################################################################################
 
+################################################################################
+# Automatically-generated file. Do not edit!
+################################################################################
+
 os_int.o :	../OS/uCOS-III/Source/os_int.c
 ../OS/uCOS-III/Source/os_int.c :
 os_int.o :	../OS/uCOS-III/Source/os.h

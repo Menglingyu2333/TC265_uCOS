@@ -2,6 +2,10 @@
 # Automatically-generated file. Do not edit!
 ################################################################################
 
+################################################################################
+# Automatically-generated file. Do not edit!
+################################################################################
+
 os_q.o :	../OS/uCOS-III/Source/os_q.c
 ../OS/uCOS-III/Source/os_q.c :
 os_q.o :	../OS/uCOS-III/Source/os.h

@@ -2,6 +2,10 @@
 # Automatically-generated file. Do not edit!
 ################################################################################
 
+################################################################################
+# Automatically-generated file. Do not edit!
+################################################################################
+
 os_var.o :	../OS/uCOS-III/Source/os_var.c
 ../OS/uCOS-III/Source/os_var.c :
 os_var.o :	../OS/uCOS-III/Source/os.h

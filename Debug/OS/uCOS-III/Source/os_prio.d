@@ -2,6 +2,10 @@
 # Automatically-generated file. Do not edit!
 ################################################################################
 
+################################################################################
+# Automatically-generated file. Do not edit!
+################################################################################
+
 os_prio.o :	../OS/uCOS-III/Source/os_prio.c
 ../OS/uCOS-III/Source/os_prio.c :
 os_prio.o :	../OS/uCOS-III/Source/os.h

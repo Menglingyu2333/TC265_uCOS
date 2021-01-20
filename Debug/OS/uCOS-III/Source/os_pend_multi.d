@@ -2,6 +2,10 @@
 # Automatically-generated file. Do not edit!
 ################################################################################
 
+################################################################################
+# Automatically-generated file. Do not edit!
+################################################################################
+
 os_pend_multi.o :	../OS/uCOS-III/Source/os_pend_multi.c
 ../OS/uCOS-III/Source/os_pend_multi.c :
 os_pend_multi.o :	../OS/uCOS-III/Source/os.h

@@ -2,6 +2,10 @@
 # Automatically-generated file. Do not edit!
 ################################################################################
 
+################################################################################
+# Automatically-generated file. Do not edit!
+################################################################################
+
 os_stat.o :	../OS/uCOS-III/Source/os_stat.c
 ../OS/uCOS-III/Source/os_stat.c :
 os_stat.o :	../OS/uCOS-III/Source/os.h
