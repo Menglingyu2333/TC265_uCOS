@@ -390,7 +390,7 @@ IFX_INLINE void restoreInterrupts(boolean enabled)
 }
 
 #define  CPU_INT_DIS()         do { cpu_sr = disableInterrupts(); } while (0) /* Save    CPU status word & disable interrupts.*/
-#define  CPU_INT_EN()          do { restoreInterrupts((boolean)cpu_sr);/*IfxStm_Timer_run(&Timer[0]);*/ } while (0) /* Restore CPU status word.                     */
+#define  CPU_INT_EN()          do { restoreInterrupts((boolean)cpu_sr);} while (0) /* Restore CPU status word.                     */
 
 
 #ifdef   CPU_CFG_INT_DIS_MEAS_EN

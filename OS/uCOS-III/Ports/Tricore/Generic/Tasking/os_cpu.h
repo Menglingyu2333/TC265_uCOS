@@ -54,7 +54,7 @@ typedef CPU_INT32U typeTaskPCXI;
 
 #define  OS_SYSCALL_CTXSW       0
 #define  OS_TASK_SW()           __syscall(OS_SYSCALL_CTXSW)
-//#define  OSIntCtxSw()           OS_TASK_SW()
+
 /*
 *********************************************************************************************************
 *                                       TIMESTAMP CONFIGURATION

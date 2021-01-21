@@ -2,6 +2,14 @@
 # Automatically-generated file. Do not edit!
 ################################################################################
 
+################################################################################
+# Automatically-generated file. Do not edit!
+################################################################################
+
+################################################################################
+# Automatically-generated file. Do not edit!
+################################################################################
+
 os_app_hooks.o :	../OS/EvalBoards/Infineon/Tricore/TC265/os_app_hooks.c
 ../OS/EvalBoards/Infineon/Tricore/TC265/os_app_hooks.c :
 os_app_hooks.o :	../OS/uCOS-III/Source/os.h

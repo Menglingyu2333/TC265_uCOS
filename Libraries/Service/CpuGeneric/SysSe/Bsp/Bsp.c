@@ -110,7 +110,6 @@ void waitTime(Ifx_TickTime timeout)
 
 
 IFX_INTERRUPT(IsrSTM0, 0, OS_CFG_TICK_TASK_PRIO);
-static void InitSTM0(CPU_INT32U  cnts);
 IfxStm_CompareConfig g_STMConf;
 void IsrSTM0(void)
 {
@@ -120,6 +119,7 @@ void IsrSTM0(void)
 //    IfxPort_togglePin(&MODULE_P14, 9);
     OS_CPU_SysTickHandler();
 }
+static void InitSTM0(CPU_INT32U  cnts);
 static void InitSTM0(CPU_INT32U  cnts)
 {
     IfxStm_initCompareConfig(&g_STMConf);                   /* Initialize the configuration structure with default values   */

@@ -129,13 +129,10 @@ void CAN_SendSingle(IfxMultican_Can_MsgObj *MO, uint32 id, uint32 high, uint32 l
 //OS
 static  OS_TCB          AppTaskStartTCB;
 static  CPU_STK         AppTaskStartStk[APP_TASK_START_STK_SIZE];
-static  OS_TCB_CTX_EXT  AppTaskStartExt;
 static  OS_TCB          AppTask1TCB;
 static  CPU_STK         AppTask1Stk[APP_TASK_1_STK_SIZE];
-static  OS_TCB_CTX_EXT  AppTask1Ext;
 static  OS_TCB          AppTask2TCB;
 static  CPU_STK         AppTask2Stk[APP_TASK_2_STK_SIZE];
-static  OS_TCB_CTX_EXT  AppTask2Ext;
 
 
 
@@ -179,7 +176,7 @@ int core0_main(void)
                  (CPU_STK_SIZE) APP_TASK_START_STK_SIZE,
                  (OS_MSG_QTY  ) 5u,
                  (OS_TICK     ) 0u,
-                 (void       *)&AppTaskStartExt,
+                 (void       *) 0,
                  (OS_OPT      )(OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
                  (OS_ERR     *)&err);
     OSStart(&err);                                              /* Start multitasking (i.e. give control to uC/OS-III). */
@@ -339,7 +336,7 @@ static  void  AppTaskCreate (void)
                  (CPU_STK_SIZE) APP_TASK_1_STK_SIZE,
                  (OS_MSG_QTY  ) 5u,
                  (OS_TICK     ) 0u,
-                 (void       *)&AppTask1Ext,
+                 (void       *) 0,
                  (OS_OPT      )(OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
                  (OS_ERR     *)&err);
 
@@ -353,7 +350,7 @@ static  void  AppTaskCreate (void)
                  (CPU_STK_SIZE) APP_TASK_2_STK_SIZE,
                  (OS_MSG_QTY  ) 5u,
                  (OS_TICK     ) 0u,
-                 (void       *)&AppTask2Ext,
+                 (void       *) 0,
                  (OS_OPT      )(OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
                  (OS_ERR     *)&err);
 }

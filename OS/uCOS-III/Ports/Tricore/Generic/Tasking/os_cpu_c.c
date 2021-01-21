@@ -57,7 +57,7 @@ const  CPU_CHAR  *os_cpu_c__c = "$Id: $";
 * \brief                      INITIAL TASK PSW
 *
 *           This define holds the initial PSW value for a new created task:
-*           (PRS=0, IO privilege = USER1, CDE=0,  CDC=0)
+*           (PRS=0, IO privilege = Supervisor Mode, CDE=1,  CDC=0)
 */
 /*------------------------------------------------------------------------------------------------*/
 #define OS_INIT_TASK_PSW         0x00000880u
@@ -69,10 +69,7 @@ const  CPU_CHAR  *os_cpu_c__c = "$Id: $";
 *           This define holds the short address for PCXI register.
 */
 /*------------------------------------------------------------------------------------------------*/
-#define SYS_TASKS_MAX_NUM   5
-static volatile OS_TCB_CTX_EXT SysTaskExt[SYS_TASKS_MAX_NUM];  /* TCB Extensions for all tasks           */
 static OS_TCB                  OSTCBDummy;              /* dummy TCB for 1st task switch          */
-static volatile OS_TCB_CTX_EXT OSTCBDummyExt;           /* dummy TCB extension                    */
 
 typedef struct _OS_UCX          /* TC upper context structure */
 {
@@ -484,42 +481,6 @@ void  OSTimeTickHook (void)
 }
 
 /*------------------------------------------------------------------------------------------------*/
-/*! \brief    remove upper/lower context from previous context list
-*
-*   \param    RemovePCXI PCXI pointer to context to be removed
-*
-*   \return   PCXI pointer to next context
-*/
-/*------------------------------------------------------------------------------------------------*/
-//static inline CPU_INT32U OSRemoveContext(CPU_INT32U removePCXI)
-//{
-//    CPU_INT32U nextPCXI;
-//
-//    __asm ("   mfcr    d14, #PCXI                     ; store current PCXI in D14               \n"\
-//           "   mtcr    #(PCXI), %1                    ; PCXI register = RemovePCXI              \n"\
-//           "   extr.u  d15, %1, #16, #4               ; calc. physical address                  \n"\
-//           "   sh      d15, d15, #28                  ; from RemovePCXI                         \n"\
-//           "   insert  d15, d15, %1, #6, #16          ; store PCXI address in D15               \n"\
-//           "   mov.a   a15, d15                       ; store PCXI address in A15               \n"\
-//           "   ld.w    d13, [a15]0                    ; store next PCXI in D13                  \n"\
-//           "   jz.t    %1:22, a                       ; if lower context, jump to label 1:      \n"\
-//           "   stucx   [a15]0                         ; copy ucx registers to remove PCX        \n"\
-//           "   st.w    [a15]0, d13                    ; restore next PCXI                       \n"\
-//           "   movh.a  a11, #@his(b)                  ; setup return address                    \n"\
-//           "   lea     a11, [a11]@los(b)              ; in A11 (label 2:)                       \n"\
-//           "   ret                                    ; restore upper context                   \n"\
-//           "a: stlcx   [a15]0                         ; copy lcx registers to remove PCX        \n"\
-//           "   st.a    [a15]4, a11                    ; workaround CPU TC.067                   \n"\
-//           "   st.w    [a15]0, d13                    ; restore next PCXI                       \n"\
-//           "   rslcx                                  ; restore lower context                   \n"\
-//           "b: mtcr    #(PCXI), d14                   ; restore PCXI register                   \n"\
-//           "   mov     %0, d13                        ; return next PCXI                        \n"\
-//           : "=d" (nextPCXI) : "d" (removePCXI) : "a15", "d13", "d14", "d15");
-//
-//   return nextPCXI;
-//}
-
-/*------------------------------------------------------------------------------------------------*/
 /*! \brief    resume execution of task
 *
 *   \note     the PCXI value of the previous context holds the new task PCXI context pointer
@@ -563,7 +524,6 @@ void OSStartHighRdy(void)
 /*------------------------------------------------------------------------------------------------*/
 void OSCtxSw(void)
 {
-    volatile OS_TCB_CTX_EXT *ext;                     /* pointer to TCB extension                 */
                                                       /*------------------------------------------*/
     __dsync();                                        /* synchronize all data accesses            */
 
@@ -572,10 +532,6 @@ void OSCtxSw(void)
     /* current PCXI register points to one additional upper context where we can find the         */
     /* current task context pointer:                                                              */
     OS_UCX* ptUpperCTX = (OS_UCX*)GET_PHYS_ADDRESS((__mfcr(CPU_PCXI)));
-    OS_LCX* ptCurTaskLCX = (OS_LCX*)GET_PHYS_ADDRESS(ptUpperCTX->_PCXI);
-    OS_UCX* ptCurTaskUCX = (OS_UCX*)GET_PHYS_ADDRESS(ptCurTaskLCX->_PCXI);
-
-    CPU_STK CurTaskStk = (CPU_STK)ptCurTaskUCX->_A10;
 
     if(OSTCBCurPtr->TaskState == (OS_STATE)OS_TASK_STATE_DEL){
         CPU_INT32U prevLink = __mfcr(CPU_FCX);
@@ -590,6 +546,9 @@ void OSCtxSw(void)
         }
     }
     else{
+        OS_LCX* ptCurTaskLCX = (OS_LCX*)GET_PHYS_ADDRESS(ptUpperCTX->_PCXI);
+        OS_UCX* ptCurTaskUCX = (OS_UCX*)GET_PHYS_ADDRESS(ptCurTaskLCX->_PCXI);
+        CPU_STK CurTaskStk = (CPU_STK)ptCurTaskUCX->_A10;
         CurTaskStk -= 4;
         OSTCBCurPtr->StkPtr = CurTaskStk;
         *((typeTaskPCXI*)(OSTCBCurPtr->StkPtr)) = ptUpperCTX->_PCXI;
