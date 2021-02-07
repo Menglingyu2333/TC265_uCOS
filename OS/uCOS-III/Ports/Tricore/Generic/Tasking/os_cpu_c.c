@@ -548,8 +548,8 @@ void OSCtxSw(void)
     else{
         OS_LCX* ptCurTaskLCX = (OS_LCX*)GET_PHYS_ADDRESS(ptUpperCTX->_PCXI);
         OS_UCX* ptCurTaskUCX = (OS_UCX*)GET_PHYS_ADDRESS(ptCurTaskLCX->_PCXI);
-        CPU_STK CurTaskStk = (CPU_STK)ptCurTaskUCX->_A10;
-        CurTaskStk -= 4;
+        CPU_STK *CurTaskStk = (CPU_STK)ptCurTaskUCX->_A10;
+        CurTaskStk --;
         OSTCBCurPtr->StkPtr = CurTaskStk;
         *((typeTaskPCXI*)(OSTCBCurPtr->StkPtr)) = ptUpperCTX->_PCXI;
     }
@@ -559,7 +559,7 @@ void OSCtxSw(void)
     OSTCBCurPtr = OSTCBHighRdyPtr;                    /* new highest prio task is current task    */
     OSPrioCur = OSPrioHighRdy;                        /* new highest prio is now current prio     */
 
-    ptUpperCTX->_PCXI = *((typeTaskPCXI*)(OSTCBCurPtr->StkPtr));
+    ptUpperCTX->_PCXI = *((typeTaskPCXI*)(OSTCBCurPtr->StkPtr++));
                                                       /* restore new task context pointer         */
     OSResumeExecution();                              /* resume execution of highest prio. task   */
 
