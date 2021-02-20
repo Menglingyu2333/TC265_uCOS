@@ -14,11 +14,11 @@
 *
 * LICENSING TERMS:
 * ---------------
-*           uC/OS-III is provided in source form for FREE short-term evaluation, for educational use or 
+*           uC/OS-III is provided in source form for FREE short-term evaluation, for educational use or
 *           for peaceful research.  If you plan or intend to use uC/OS-III in a commercial application/
-*           product then, you need to contact Micrium to properly license uC/OS-III for its use in your 
-*           application/product.   We provide ALL the source code for your convenience and to help you 
-*           experience uC/OS-III.  The fact that the source is provided does NOT mean that you can use 
+*           product then, you need to contact Micrium to properly license uC/OS-III for its use in your
+*           application/product.   We provide ALL the source code for your convenience and to help you
+*           experience uC/OS-III.  The fact that the source is provided does NOT mean that you can use
 *           it commercially without paying a licensing fee.
 *
 *           Knowledge of the source code may NOT be used to develop a similar product.
@@ -317,6 +317,7 @@ OS_SEM_CTR  OSSemPend (OS_SEM   *p_sem,
     OS_SEM_CTR    ctr;
     OS_PEND_DATA  pend_data;
     CPU_SR_ALLOC();
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 
@@ -394,19 +395,20 @@ OS_SEM_CTR  OSSemPend (OS_SEM   *p_sem,
     OS_CRITICAL_EXIT_NO_SCHED();
 
     OSSched();                                              /* Find the next highest priority task ready to run       */
+    CpuID = IfxCpu_getCoreId();
 
     CPU_CRITICAL_ENTER();
-    switch (OSTCBCurPtr->PendStatus) {
+    switch (OSTCBCurPtr[CpuID]->PendStatus) {
         case OS_STATUS_PEND_OK:                             /* We got the semaphore                                   */
              if (p_ts != (CPU_TS *)0) {
-                *p_ts  =  OSTCBCurPtr->TS;
+                *p_ts  =  OSTCBCurPtr[CpuID]->TS;
              }
             *p_err = OS_ERR_NONE;
              break;
 
         case OS_STATUS_PEND_ABORT:                          /* Indicate that we aborted                               */
              if (p_ts != (CPU_TS *)0) {
-                *p_ts  =  OSTCBCurPtr->TS;
+                *p_ts  =  OSTCBCurPtr[CpuID]->TS;
              }
             *p_err = OS_ERR_PEND_ABORT;
              break;
@@ -420,7 +422,7 @@ OS_SEM_CTR  OSSemPend (OS_SEM   *p_sem,
 
         case OS_STATUS_PEND_DEL:                            /* Indicate that object pended on has been deleted        */
              if (p_ts != (CPU_TS *)0) {
-                *p_ts  =  OSTCBCurPtr->TS;
+                *p_ts  =  OSTCBCurPtr[CpuID]->TS;
              }
             *p_err = OS_ERR_OBJ_DEL;
              break;

@@ -14,11 +14,11 @@
 *
 * LICENSING TERMS:
 * ---------------
-*           uC/OS-III is provided in source form for FREE short-term evaluation, for educational use or 
+*           uC/OS-III is provided in source form for FREE short-term evaluation, for educational use or
 *           for peaceful research.  If you plan or intend to use uC/OS-III in a commercial application/
-*           product then, you need to contact Micrium to properly license uC/OS-III for its use in your 
-*           application/product.   We provide ALL the source code for your convenience and to help you 
-*           experience uC/OS-III.  The fact that the source is provided does NOT mean that you can use 
+*           product then, you need to contact Micrium to properly license uC/OS-III for its use in your
+*           application/product.   We provide ALL the source code for your convenience and to help you
+*           experience uC/OS-III.  The fact that the source is provided does NOT mean that you can use
 *           it commercially without paying a licensing fee.
 *
 *           Knowledge of the source code may NOT be used to develop a similar product.
@@ -57,6 +57,9 @@ void  OSInit (OS_ERR  *p_err)
     CPU_STK      *p_stk;
     CPU_STK_SIZE  size;
 
+#ifdef  SMP_EN
+    CPU_INT08U  i;
+#endif
 
 
 #ifdef OS_SAFETY_CRITICAL
@@ -73,12 +76,21 @@ void  OSInit (OS_ERR  *p_err)
     OSRunning                       =  OS_STATE_OS_STOPPED; /* Indicate that multitasking not started                 */
 
     OSSchedLockNestingCtr           = (OS_NESTING_CTR)0;    /* Clear the scheduling lock counter                      */
+#ifdef  SMP_EN
+    for(i = 0; i < CPU_CORE_NUM; i++){
+        OSTCBCurPtr[i]              = (OS_TCB *)0;          /* Initialize OS_TCB pointers to a known state            */
+        OSTCBHighRdyPtr[i]          = (OS_TCB *)0;
 
+        OSPrioCur[i]                = (OS_PRIO)0;           /* Initialize priority variables to a known state         */
+        OSPrioHighRdy[i]            = (OS_PRIO)0;
+    }
+#else
     OSTCBCurPtr                     = (OS_TCB *)0;          /* Initialize OS_TCB pointers to a known state            */
     OSTCBHighRdyPtr                 = (OS_TCB *)0;
 
     OSPrioCur                       = (OS_PRIO)0;           /* Initialize priority variables to a known state         */
     OSPrioHighRdy                   = (OS_PRIO)0;
+#endif
     OSPrioSaved                     = (OS_PRIO)0;
 
 #if OS_CFG_SCHED_LOCK_TIME_MEAS_EN > 0u
@@ -127,7 +139,7 @@ void  OSInit (OS_ERR  *p_err)
 
     OS_RdyListInit();                                       /* Initialize the Ready List                              */
 
-    
+
 #if OS_CFG_FLAG_EN > 0u                                     /* Initialize the Event Flag module                       */
     OS_FlagInit(p_err);
     if (*p_err != OS_ERR_NONE) {
@@ -197,7 +209,7 @@ void  OSInit (OS_ERR  *p_err)
     }
 #endif
 
-    
+
     OS_IdleTaskInit(p_err);                                 /* Initialize the Idle Task                               */
     if (*p_err != OS_ERR_NONE) {
         return;
@@ -275,6 +287,90 @@ void  OSIntEnter (void)
 
     OSIntNestingCtr++;                                      /* Increment ISR nesting level                            */
 }
+#ifdef SMP_EN
+/*$PAGE*/
+/*
+************************************************************************************************************************
+*                                                       EXIT ISR
+*
+* Description: This function is used to notify uC/OS-III that you have completed servicing an ISR.  When the last nested
+*              ISR has completed, uC/OS-III will call the scheduler to determine whether a new, high-priority task, is
+*              ready to run.
+*
+* Arguments  : none
+*
+* Returns    : none
+*
+* Note(s)    : 1) You MUST invoke OSIntEnter() and OSIntExit() in pair.  In other words, for every call to OSIntEnter()
+*                 (or direct increment to OSIntNestingCtr) at the beginning of the ISR you MUST have a call to OSIntExit()
+*                 at the end of the ISR.
+*
+*              2) Rescheduling is prevented when the scheduler is locked (see OSSchedLock())
+************************************************************************************************************************
+*/
+
+void  OSIntExit (void)
+{
+    CPU_INT08U i;
+    CPU_SR_ALLOC();
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
+
+
+
+    if (OSRunning != OS_STATE_OS_RUNNING) {                 /* Has the OS started?                                    */
+        return;                                             /* No                                                     */
+    }
+
+    CPU_INT_DIS();
+    if (OSIntNestingCtr == (OS_NESTING_CTR)0) {             /* Prevent OSIntNestingCtr from wrapping                  */
+        CPU_INT_EN();
+        return;
+    }
+    OSIntNestingCtr--;
+    if (OSIntNestingCtr > (OS_NESTING_CTR)0) {              /* ISRs still nested?                                     */
+        CPU_INT_EN();                                       /* Yes                                                    */
+        return;
+    }
+
+    if (OSSchedLockNestingCtr > (OS_NESTING_CTR)0) {        /* Scheduler still locked?                                */
+        CPU_INT_EN();                                       /* Yes                                                    */
+        return;
+    }
+
+    OS_PrioGetHighest();                                    /* Find highest priority                                  */
+
+    for(i = 0; i < CPU_CORE_NUM; i++){
+        if(i != CpuID){
+            if (OSTCBHighRdyPtr[i] != OSTCBCurPtr[i]) {     /* Current task is still highest priority task?           */
+                CPU_INT_EN();
+                OS_TASK_SW(i);                              /* request a task switch to highest prio    */
+#if OS_CFG_TASK_PROFILE_EN > 0u
+                OSTCBHighRdyPtr[i]->CtxSwCtr++;             /* Inc. # of context switches to this task                */
+#endif
+                OSTaskCtxSwCtr++;                           /* Increment context switch counter                       */
+            }
+        }
+    }
+
+    if (OSTCBHighRdyPtr[CpuID] == OSTCBCurPtr[CpuID]) {
+                                                            /* Current task still the highest priority?               */
+        CPU_INT_EN();                                       /* Yes                                                    */
+        return;
+    }
+
+#if OS_CFG_TASK_PROFILE_EN > 0u
+    OSTCBHighRdyPtr[CpuID]->CtxSwCtr++;                            /* Inc. # of context switches for this new task           */
+#endif
+    OSTaskCtxSwCtr++;                                       /* Keep track of the total number of ctx switches         */
+
+#if defined(OS_CFG_TLS_TBL_SIZE) && (OS_CFG_TLS_TBL_SIZE > 0u)
+    OS_TLS_TaskSw();
+#endif
+    CPU_INT_EN();
+    OSIntCtxSw(CpuID);                                           /* Perform interrupt level ctx switch                     */
+    CPU_INT_EN();
+}
+#else
 
 /*$PAGE*/
 /*
@@ -343,6 +439,7 @@ void  OSIntExit (void)
     CPU_INT_EN();
 }
 
+#endif
 /*$PAGE*/
 /*
 ************************************************************************************************************************
@@ -367,6 +464,76 @@ void  OSSafetyCriticalStart (void)
 
 #endif
 
+#ifdef SMP_EN
+
+/*$PAGE*/
+/*
+************************************************************************************************************************
+*                                                      SCHEDULER
+*
+* Description: This function is called by other uC/OS-III services to determine whether a new, high priority task has
+*              been made ready to run.  This function is invoked by TASK level code and is not used to reschedule tasks
+*              from ISRs (see OSIntExit() for ISR rescheduling).
+*
+* Arguments  : none
+*
+* Returns    : none
+*
+* Note(s)    : 1) Rescheduling is prevented when the scheduler is locked (see OSSchedLock())
+************************************************************************************************************************
+*/
+
+void  OSSched (void)
+{
+    CPU_INT08U i;
+    CPU_SR_ALLOC();
+
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
+
+
+    if (OSIntNestingCtr > (OS_NESTING_CTR)0) {              /* ISRs still nested?                                     */
+        return;                                             /* Yes ... only schedule when no nested ISRs              */
+    }
+
+    if (OSSchedLockNestingCtr > (OS_NESTING_CTR)0) {        /* Scheduler locked?                                      */
+        return;                                             /* Yes                                                    */
+    }
+
+    CPU_INT_DIS();
+
+    OS_PrioGetHighest();                                    /* Find the highest priority ready                        */
+
+
+    for(i = 0; i < CPU_CORE_NUM; i++){
+        if(i != CpuID){
+            if (OSTCBHighRdyPtr[i] != OSTCBCurPtr[i]) {     /* Current task is still highest priority task?           */
+                CPU_INT_EN();
+                OS_TASK_SW(i);                              /* request a task switch to highest prio    */
+#if OS_CFG_TASK_PROFILE_EN > 0u
+                OSTCBHighRdyPtr[i]->CtxSwCtr++;             /* Inc. # of context switches to this task                */
+#endif
+                OSTaskCtxSwCtr++;                           /* Increment context switch counter                       */
+            }
+        }
+    }
+    if (OSTCBHighRdyPtr[CpuID] == OSTCBCurPtr[CpuID]) {     /* Current task is still highest priority task?           */
+        CPU_INT_EN();                                       /* Yes ... no need to context switch                      */
+        return;
+    }
+
+#if OS_CFG_TASK_PROFILE_EN > 0u
+    OSTCBHighRdyPtr[CpuID]->CtxSwCtr++;                     /* Inc. # of context switches to this task                */
+#endif
+    OSTaskCtxSwCtr++;                                       /* Increment context switch counter                       */
+
+#if defined(OS_CFG_TLS_TBL_SIZE) && (OS_CFG_TLS_TBL_SIZE > 0u)
+    OS_TLS_TaskSw();
+#endif
+
+    OS_TASK_SW(CpuID);                                           /* Perform a task level context switch                    */
+    CPU_INT_EN();
+}
+#else
 /*$PAGE*/
 /*
 ************************************************************************************************************************
@@ -418,6 +585,8 @@ void  OSSched (void)
     OS_TASK_SW();                                           /* Perform a task level context switch                    */
     CPU_INT_EN();
 }
+
+#endif
 
 /*$PAGE*/
 /*
@@ -628,6 +797,7 @@ void  OSSchedRoundRobinYield (OS_ERR  *p_err)
     OS_RDY_LIST  *p_rdy_list;
     OS_TCB       *p_tcb;
     CPU_SR_ALLOC();
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 
@@ -656,7 +826,7 @@ void  OSSchedRoundRobinYield (OS_ERR  *p_err)
     }
 
     CPU_CRITICAL_ENTER();
-    p_rdy_list = &OSRdyList[OSPrioCur];                     /* Can't yield if it's the only task at that priority     */
+    p_rdy_list = &OSRdyList[OSPrioCur[CpuID]];                     /* Can't yield if it's the only task at that priority     */
     if (p_rdy_list->NbrEntries < (OS_OBJ_QTY)2) {
         CPU_CRITICAL_EXIT();
        *p_err = OS_ERR_ROUND_ROBIN_1;
@@ -705,6 +875,8 @@ void  OSSchedRoundRobinYield (OS_ERR  *p_err)
 
 void  OSStart (OS_ERR  *p_err)
 {
+    CPU_INT08U i;
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 #ifdef OS_SAFETY_CRITICAL
     if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
@@ -713,10 +885,11 @@ void  OSStart (OS_ERR  *p_err)
 #endif
 
     if (OSRunning == OS_STATE_OS_STOPPED) {
-        OSPrioHighRdy   = OS_PrioGetHighest();              /* Find the highest priority                              */
-        OSPrioCur       = OSPrioHighRdy;
-        OSTCBHighRdyPtr = OSRdyList[OSPrioHighRdy].HeadPtr;
-        OSTCBCurPtr     = OSTCBHighRdyPtr;
+
+        OS_PrioGetHighest();              /* Find the highest priority                              */
+        for(i = 0; i < CPU_CORE_NUM; i++){
+            OSPrioCur[i]       = OSPrioHighRdy[i];
+        }
         OSRunning       = OS_STATE_OS_RUNNING;
         OSStartHighRdy();                                   /* Execute target specific code to start task             */
        *p_err           = OS_ERR_FATAL_RETURN;              /* OSStart() is not supposed to return                    */
@@ -824,14 +997,27 @@ void  OS_IdleTaskInit (OS_ERR  *p_err)
 
     OSIdleTaskCtr = (OS_IDLE_CTR)0;
                                                             /* ---------------- CREATE THE IDLE TASK ---------------- */
-    OSTaskCreate((OS_TCB     *)&OSIdleTaskTCB,
-                 (CPU_CHAR   *)((void *)"uC/OS-III Idle Task"),
+    OSTaskCreate((OS_TCB     *)&OSIdleTaskTCB[0],
+                 (CPU_CHAR   *)((void *)"uC/OS-III Idle Task1"),
                  (OS_TASK_PTR)OS_IdleTask,
                  (void       *)0,
                  (OS_PRIO     )(OS_CFG_PRIO_MAX - 1u),
-                 (CPU_STK    *)OSCfg_IdleTaskStkBasePtr,
-                 (CPU_STK_SIZE)OSCfg_IdleTaskStkLimit,
-                 (CPU_STK_SIZE)OSCfg_IdleTaskStkSize,
+                 (CPU_STK    *)OSCfg_IdleTaskStkBasePtr1,
+                 (CPU_STK_SIZE)OSCfg_IdleTaskStkLimit1,
+                 (CPU_STK_SIZE)OSCfg_IdleTaskStkSize1,
+                 (OS_MSG_QTY  )0u,
+                 (OS_TICK     )0u,
+                 (void       *)0,
+                 (OS_OPT      )(OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR | OS_OPT_TASK_NO_TLS),
+                 (OS_ERR     *)p_err);
+    OSTaskCreate((OS_TCB     *)&OSIdleTaskTCB[1],
+                 (CPU_CHAR   *)((void *)"uC/OS-III Idle Task2"),
+                 (OS_TASK_PTR)OS_IdleTask,
+                 (void       *)0,
+                 (OS_PRIO     )(OS_CFG_PRIO_MAX - 2u),
+                 (CPU_STK    *)OSCfg_IdleTaskStkBasePtr2,
+                 (CPU_STK_SIZE)OSCfg_IdleTaskStkLimit2,
+                 (CPU_STK_SIZE)OSCfg_IdleTaskStkSize2,
                  (OS_MSG_QTY  )0u,
                  (OS_TICK     )0u,
                  (void       *)0,
@@ -876,30 +1062,31 @@ void  OS_Pend (OS_PEND_DATA  *p_pend_data,
                OS_TICK        timeout)
 {
     OS_PEND_LIST  *p_pend_list;
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 
-    OSTCBCurPtr->PendOn     = pending_on;                    /* Resource not available, wait until it is              */
-    OSTCBCurPtr->PendStatus = OS_STATUS_PEND_OK;
+    OSTCBCurPtr[CpuID]->PendOn     = pending_on;                    /* Resource not available, wait until it is              */
+    OSTCBCurPtr[CpuID]->PendStatus = OS_STATUS_PEND_OK;
 
-    OS_TaskBlock(OSTCBCurPtr,                                /* Block the task and add it to the tick list if needed  */
+    OS_TaskBlock(OSTCBCurPtr[CpuID],                                /* Block the task and add it to the tick list if needed  */
                  timeout);
 
     if (p_obj != (OS_PEND_OBJ *)0) {                         /* Add the current task to the pend list ...             */
         p_pend_list             = &p_obj->PendList;          /* ... if there is an object to pend on                  */
         p_pend_data->PendObjPtr = p_obj;                     /* Save the pointer to the object pending on             */
-        OS_PendDataInit((OS_TCB       *)OSTCBCurPtr,         /* Initialize the remaining field                        */
+        OS_PendDataInit((OS_TCB       *)OSTCBCurPtr[CpuID],         /* Initialize the remaining field                        */
                         (OS_PEND_DATA *)p_pend_data,
                         (OS_OBJ_QTY    )1);
         OS_PendListInsertPrio(p_pend_list,                   /* Insert in the pend list in priority order             */
                               p_pend_data);
     } else {
-        OSTCBCurPtr->PendDataTblEntries = (OS_OBJ_QTY    )0; /* If no object being pended on the clear these fields   */
-        OSTCBCurPtr->PendDataTblPtr     = (OS_PEND_DATA *)0; /* ... in the TCB                                        */
+        OSTCBCurPtr[CpuID]->PendDataTblEntries = (OS_OBJ_QTY    )0; /* If no object being pended on the clear these fields   */
+        OSTCBCurPtr[CpuID]->PendDataTblPtr     = (OS_PEND_DATA *)0; /* ... in the TCB                                        */
     }
 #if OS_CFG_DBG_EN > 0u
     OS_PendDbgNameAdd(p_obj,
-                      OSTCBCurPtr);
+                      OSTCBCurPtr[CpuID]);
 #endif
 }
 
@@ -1716,7 +1903,7 @@ void  OS_PendObjDel (OS_PEND_OBJ  *p_obj,
              OS_PendListRemove(p_tcb);                           /* Remove task from all wait lists                   */
              OS_TaskRdy(p_tcb);
              p_tcb->TaskState  = OS_TASK_STATE_RDY;              /* Task is readied because object is deleted         */
-             p_tcb->PendStatus = OS_STATUS_PEND_DEL;             
+             p_tcb->PendStatus = OS_STATUS_PEND_DEL;
              p_tcb->PendOn     = OS_TASK_PEND_ON_NOTHING;
              break;
 
@@ -1735,7 +1922,7 @@ void  OS_PendObjDel (OS_PEND_OBJ  *p_obj,
              OS_TickListRemove(p_tcb);                           /* Cancel the timeout                                */
              OS_PendListRemove(p_tcb);                           /* Remove task from all wait lists                   */
              p_tcb->TaskState  = OS_TASK_STATE_SUSPENDED;        /* Task needs to remain suspended                    */
-             p_tcb->PendStatus = OS_STATUS_PEND_DEL;             
+             p_tcb->PendStatus = OS_STATUS_PEND_DEL;
              p_tcb->PendOn     = OS_TASK_PEND_ON_NOTHING;        /* Indicate no longer pending                        */
              break;
 
@@ -2073,8 +2260,9 @@ void  OS_RdyListInit (void)
 
 void  OS_RdyListInsert (OS_TCB  *p_tcb)
 {
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
     OS_PrioInsert(p_tcb->Prio);
-    if (p_tcb->Prio == OSPrioCur) {                         /* Are we readying a task at the same prio?               */
+    if (p_tcb->Prio == OSPrioCur[CpuID]) {                  /* Are we readying a task at the same prio?               */
         OS_RdyListInsertTail(p_tcb);                        /* Yes, insert readied task at the end of the list        */
     } else {
         OS_RdyListInsertHead(p_tcb);                        /* No,  insert readied task at the beginning of the list  */

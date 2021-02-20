@@ -14,11 +14,11 @@
 *
 * LICENSING TERMS:
 * ---------------
-*           uC/OS-III is provided in source form for FREE short-term evaluation, for educational use or 
+*           uC/OS-III is provided in source form for FREE short-term evaluation, for educational use or
 *           for peaceful research.  If you plan or intend to use uC/OS-III in a commercial application/
-*           product then, you need to contact Micrium to properly license uC/OS-III for its use in your 
-*           application/product.   We provide ALL the source code for your convenience and to help you 
-*           experience uC/OS-III.  The fact that the source is provided does NOT mean that you can use 
+*           product then, you need to contact Micrium to properly license uC/OS-III for its use in your
+*           application/product.   We provide ALL the source code for your convenience and to help you
+*           experience uC/OS-III.  The fact that the source is provided does NOT mean that you can use
 *           it commercially without paying a licensing fee.
 *
 *           Knowledge of the source code may NOT be used to develop a similar product.
@@ -66,7 +66,78 @@ void  OS_PrioInit (void)
          OSPrioTbl[i] = (CPU_DATA)0;
     }
 }
+#ifdef  SMP_EN
+/*
+************************************************************************************************************************
+*                                           GET HIGHEST PRIORITY TASK WAITING
+*
+* Description: This function is called by other uC/OS-III services to determine the highest priority task
+*              waiting on the event.
+*
+* Arguments  : none
+*
+* Returns    : The priority of the Highest Priority Task (HPT) waiting for the event
+*
+* Note(s)    : 1) This function is INTERNAL to uC/OS-III and your application MUST NOT call it.
+************************************************************************************************************************
+*/
 
+void  OS_PrioGetHighest (void)
+{
+    CPU_DATA  *p_tbl;
+    CPU_DATA   OSPrioTblCpy[OS_PRIO_TBL_SIZE];
+    CPU_INT08U i, j;
+    OS_PRIO    PrioHighs[CPU_CORE_NUM];
+    OS_PRIO    PrioIsSched[CPU_CORE_NUM];
+    CPU_INT08U CoreIsSched[CPU_CORE_NUM];
+    CPU_INT08U tmpCLZ;
+
+    for(i = 0; i < OS_PRIO_TBL_SIZE; i++){
+        OSPrioTblCpy[i] = OSPrioTbl[i];
+    }
+
+    for(i = 0; i < CPU_CORE_NUM; i++){
+        PrioHighs[i]    = (OS_PRIO)0;
+        p_tbl           = &OSPrioTblCpy[0];
+        while (*p_tbl == (CPU_DATA)0) {                         /* Search the bitmap table for the highest priority       */
+            PrioHighs[i] += DEF_INT_CPU_NBR_BITS;               /* Compute the step of each CPU_DATA entry                */
+            p_tbl++;
+        }
+        tmpCLZ = (OS_PRIO)CPU_CntLeadZeros(*p_tbl);             /* Find the position of the first bit set at the entry    */
+        PrioHighs[i]     += tmpCLZ;
+//        if(PrioHighs[i]  != (OS_CFG_PRIO_MAX - 1u)){
+            *p_tbl &= ~((CPU_DATA)(0x80000000) >> tmpCLZ);      /* Delete PrioHighs[i] form OSPrioTblCpy */
+//        }
+    }
+    for(i = 0; i < CPU_CORE_NUM; i++){
+        PrioIsSched[i] = FALSE;
+        CoreIsSched[i] = FALSE;
+    }
+
+    for(i = 0; i < CPU_CORE_NUM; i++){
+        for(j = 0; j < CPU_CORE_NUM; j++){
+            if(OSPrioCur[i] == PrioHighs[j]){
+                CoreIsSched[i] = TRUE;
+                PrioIsSched[j] = TRUE;
+                break;
+            }
+        }
+    }
+
+    for(i = 0; i < CPU_CORE_NUM; i++){
+        if(PrioIsSched[i] == FALSE){
+            for(j = 0; j < CPU_CORE_NUM; j++){
+                if(CoreIsSched[j] == FALSE){
+                    break;
+                }
+            }
+            OSPrioHighRdy[j] = PrioHighs[i];                                    /* Use unused core */
+            OSTCBHighRdyPtr[j]  = OSRdyList[OSPrioHighRdy[j]].HeadPtr;
+            CoreIsSched[j] = TRUE;
+        }
+    }
+}
+#else
 /*
 ************************************************************************************************************************
 *                                           GET HIGHEST PRIORITY TASK WAITING
@@ -97,7 +168,7 @@ OS_PRIO  OS_PrioGetHighest (void)
     prio += (OS_PRIO)CPU_CntLeadZeros(*p_tbl);              /* Find the position of the first bit set at the entry    */
     return (prio);
 }
-
+#endif
 /*
 ************************************************************************************************************************
 *                                                  INSERT PRIORITY

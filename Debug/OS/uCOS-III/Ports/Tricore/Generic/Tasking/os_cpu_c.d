@@ -2,6 +2,14 @@
 # Automatically-generated file. Do not edit!
 ################################################################################
 
+################################################################################
+# Automatically-generated file. Do not edit!
+################################################################################
+
+################################################################################
+# Automatically-generated file. Do not edit!
+################################################################################
+
 os_cpu_c.o :	../OS/uCOS-III/Ports/Tricore/Generic/Tasking/os_cpu_c.c
 ../OS/uCOS-III/Ports/Tricore/Generic/Tasking/os_cpu_c.c :
 os_cpu_c.o :	../OS/EvalBoards/Infineon/Tricore/TC265/includes.h

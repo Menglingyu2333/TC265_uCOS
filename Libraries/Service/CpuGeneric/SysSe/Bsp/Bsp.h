@@ -53,6 +53,9 @@
 #include "Ifx_Cfg.h"                   /* Do not remove this include */
 #include "Cpu/Std/IfxCpu_Intrinsics.h" /* Do not remove this include */
 #include "_Utilities/Ifx_Assert.h"     /* Do not remove this include */
+#include "IfxSrc.h"                   /* Do not remove this include */
+#include "IfxInt_reg.h"                   /* Do not remove this include */
+
 
 #include "Cpu/Std/IfxCpu.h"
 #include "Port/Std/IfxPort.h"
@@ -115,6 +118,7 @@ IFX_EXTERN void         waitTime(Ifx_TickTime timeout);
 void  OS_CPU_SysTickInit   (CPU_INT32U  cnts);
 void  OS_CPU_SysTickHandler(void);
 CPU_INT32U  BSP_CPU_ClkFreq (void);
+void OSTaskSwIntInit(void);
 
 /** Prototype for wait() functions */
 typedef void (*WaitTimeFunction)(Ifx_TickTime timeout);

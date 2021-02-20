@@ -1,1 +1,13 @@
----- _lc_ub_csa_tc0 Matches (0 in 0 files) ----
+---- OSCtxSw Matches (13 in 2 files) ----
+SysCallExtensionHook in Ifx_Cfg_Trap.h :             OSCtxSw();
+OSResumeExecution in os_cpu_c.c (OS\uCOS-III\Ports\Tricore\Generic\Tasking) :            "   ret                                    ; restore context from call to OSCtxSw    \n"\
+os_cpu_c.c (OS\uCOS-III\Ports\Tricore\Generic\Tasking) line 549 : static inline void OSCtxSw(CPU_INT08U CpuID);
+os_cpu_c.c (OS\uCOS-III\Ports\Tricore\Generic\Tasking) line 550 : static inline void OSCtxSw(CPU_INT08U CpuID)
+OSCtxSw in os_cpu_c.c (OS\uCOS-III\Ports\Tricore\Generic\Tasking) :     /* because OSCtxSw is reached via a call command from ISR vector / trap handler               */
+os_cpu_c.c (OS\uCOS-III\Ports\Tricore\Generic\Tasking) line 615 : void OSCtxSw(void)
+OSCtxSw in os_cpu_c.c (OS\uCOS-III\Ports\Tricore\Generic\Tasking) :     /* because OSCtxSw is reached via a call command from ISR vector / trap handler               */
+os_cpu_c.c (OS\uCOS-III\Ports\Tricore\Generic\Tasking) line 661 : *          This function restores the context from the previous calls and jumps to OSCtxSw().
+os_cpu_c.c (OS\uCOS-III\Ports\Tricore\Generic\Tasking) line 662 : *          OSCtxSw() is invoked by a jump because there is still one upper context left on
+OSIntCtxSw in os_cpu_c.c (OS\uCOS-III\Ports\Tricore\Generic\Tasking) :            "    j       OSCtxSw                        ; jump to OSCtxSw()                       \n"\
+OSTaskSwIntHandler_Cpu0 in os_cpu_c.c (OS\uCOS-III\Ports\Tricore\Generic\Tasking) : //    OSCtxSw(0);
+OSTaskSwIntHandler_Cpu1 in os_cpu_c.c (OS\uCOS-III\Ports\Tricore\Generic\Tasking) : //    OSCtxSw(1);

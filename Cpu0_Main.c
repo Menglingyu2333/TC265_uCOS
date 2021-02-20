@@ -121,18 +121,18 @@ void CAN_SendSingle(IfxMultican_Can_MsgObj *MO, uint32 id, uint32 high, uint32 l
 {
     // Initialise the message strcture
     IfxMultican_Message txMsg;
-    IfxMultican_Message_init(&txMsg, id, low, high, IfxMultican_DataLengthCode_8);
+    IfxMultican_Message_init(&txMsg, id, high, low, IfxMultican_DataLengthCode_8);
     IfxMultican_Can_MsgObj_sendMessage(MO, &txMsg);
 }
 
 
 //OS
 static  OS_TCB          AppTaskStartTCB;
-static  CPU_STK         AppTaskStartStk[APP_TASK_START_STK_SIZE];
+DATA_SECTION(dsram0)  CPU_STK __align(64) AppTaskStartStk[APP_TASK_START_STK_SIZE];
 static  OS_TCB          AppTask1TCB;
-static  CPU_STK         AppTask1Stk[APP_TASK_1_STK_SIZE];
+static  CPU_STK __align(64) AppTask1Stk[APP_TASK_1_STK_SIZE];
 static  OS_TCB          AppTask2TCB;
-static  CPU_STK         AppTask2Stk[APP_TASK_2_STK_SIZE];
+static  CPU_STK __align(64) AppTask2Stk[APP_TASK_2_STK_SIZE];
 
 
 
@@ -143,6 +143,10 @@ static  void    BSP_Init(void);
 void    PeriodicTimerTask(OS_TMR *p_tmr, void *p_arg);
 OS_TMR  TaskTimer1;
 OS_SEM  Sem1;
+
+CPU_INT32U SyncFlag = 0;
+CPU_INT32U FCX_VALUE;
+CPU_INT32U LCX_VALUE;
 
 int core0_main(void)
 {
@@ -155,12 +159,15 @@ int core0_main(void)
     IfxScuWdt_disableCpuWatchdog(IfxScuWdt_getCpuWatchdogPassword());
     IfxScuWdt_disableSafetyWatchdog(IfxScuWdt_getSafetyWatchdogPassword());
 
+    BSP_Init();
+
     /* Wait for CPU sync event */
     IfxCpu_emitEvent(&g_cpuSyncEvent);
     IfxCpu_waitEvent(&g_cpuSyncEvent, 1);
-
-    IfxCpu_disableInterrupts();     //BSP_IntDisAll();          /* Disable all interrupts.                              */
-    BSP_Init();
+    SyncFlag = 1;
+//    while(SyncFlag == 1);
+//    IfxCpu_disableInterrupts();     //BSP_IntDisAll();          /* Disable all interrupts.                              */
+    OSTaskSwIntInit();
 
     OS_CPU_SysTickInit((CPU_INT32U)(TimeConst_1s)/OSCfg_TickRate_Hz);                                   /* Init uC/OS periodic time src (SysTick).              */
 
@@ -261,6 +268,9 @@ static  void  AppTaskStart (void *p_arg)
 void AppTask1 ()
 {
     OS_ERR       err;
+    IfxCpu_Id   CpuID;
+
+
     OSTimeDlyHMSM(0, 0, 0, 100,
                   OS_OPT_TIME_HMSM_STRICT,
                   &err);
@@ -271,8 +281,9 @@ void AppTask1 ()
                       OS_OPT_TIME_HMSM_STRICT,
                       &err);
         IfxPort_togglePin(&MODULE_P14, 9);
-        CAN_SendSingle(&canMsgObj0, 0x102, 0x0000, 0x0000);
-        OSSemPost(&Sem1, OS_OPT_POST_1, &err);
+        CpuID = IfxCpu_getCoreId();
+        CAN_SendSingle(&canMsgObj0, 0x102, (0x0000 | CpuID), 0x0000);
+//        OSSemPost(&Sem1, OS_OPT_POST_1, &err);
     }
 }
 
@@ -293,23 +304,27 @@ void AppTask1 ()
 void AppTask2 ()
 {
     OS_ERR       err;
+    IfxCpu_Id   CpuID;
     OSTimeDlyHMSM(0, 0, 0, 230,
                   OS_OPT_TIME_HMSM_STRICT,
                   &err);
     CAN_SendSingle(&canMsgObj0, 0x201, 0x0000, 0x0000);
 
     while (TRUE) {
-//        OSTimeDlyHMSM(0, 0, 0, 203,
-//                      OS_OPT_TIME_HMSM_STRICT,
-//                      &err);
-        OSSemPend(&Sem1, 0, OS_OPT_PEND_BLOCKING, NULL_PTR, &err);
-        CAN_SendSingle(&canMsgObj1, 0x202, 0x0000, 0x0000);
+        OSTimeDlyHMSM(0, 0, 0, 203,
+                      OS_OPT_TIME_HMSM_STRICT,
+                      &err);
+//        OSSemPend(&Sem1, 0, OS_OPT_PEND_BLOCKING, NULL_PTR, &err);
+        CpuID = IfxCpu_getCoreId();
+        CAN_SendSingle(&canMsgObj1, 0x202, (0x0000 | CpuID), 0x0000);
     }
 }
 
 void PeriodicTimerTask(OS_TMR *p_tmr, void *p_arg)
 {
-    CAN_SendSingle(&canMsgObj1, 0x301, 0x0000, 0x0000);
+    IfxCpu_Id   CpuID;
+    CpuID = IfxCpu_getCoreId();
+    CAN_SendSingle(&canMsgObj1, 0x301, (0x0000 | CpuID), 0x0000);
 }
 /*
 *********************************************************************************************************

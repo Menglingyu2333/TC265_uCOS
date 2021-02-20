@@ -14,11 +14,11 @@
 *
 * LICENSING TERMS:
 * ---------------
-*           uC/OS-III is provided in source form for FREE short-term evaluation, for educational use or 
+*           uC/OS-III is provided in source form for FREE short-term evaluation, for educational use or
 *           for peaceful research.  If you plan or intend to use uC/OS-III in a commercial application/
-*           product then, you need to contact Micrium to properly license uC/OS-III for its use in your 
-*           application/product.   We provide ALL the source code for your convenience and to help you 
-*           experience uC/OS-III.  The fact that the source is provided does NOT mean that you can use 
+*           product then, you need to contact Micrium to properly license uC/OS-III for its use in your
+*           application/product.   We provide ALL the source code for your convenience and to help you
+*           experience uC/OS-III.  The fact that the source is provided does NOT mean that you can use
 *           it commercially without paying a licensing fee.
 *
 *           Knowledge of the source code may NOT be used to develop a similar product.
@@ -54,7 +54,7 @@ const  CPU_CHAR  *os_time__c = "$Id: $";
 *                            OS_OPT_TIME_DLY      : OSTickCtr + dly
 *                            OS_OPT_TIME_TIMEOUT  : OSTickCtr + dly
 *                            OS_OPT_TIME_MATCH    : dly
-*                            OS_OPT_TIME_PERIODIC : OSTCBCurPtr->TickCtrPrev + dly
+*                            OS_OPT_TIME_PERIODIC : OSTCBCurPtr[CpuID]->TickCtrPrev + dly
 *
 *              opt       specifies whether 'dly' represents absolute or relative time; default option marked with *** :
 *
@@ -83,6 +83,7 @@ void  OSTimeDly (OS_TICK   dly,
 {
     CPU_SR_ALLOC();
 
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 #ifdef OS_SAFETY_CRITICAL
@@ -123,8 +124,8 @@ void  OSTimeDly (OS_TICK   dly,
     }
 
     OS_CRITICAL_ENTER();
-    OSTCBCurPtr->TaskState = OS_TASK_STATE_DLY;
-    OS_TickListInsert(OSTCBCurPtr,
+    OSTCBCurPtr[CpuID]->TaskState = OS_TASK_STATE_DLY;
+    OS_TickListInsert(OSTCBCurPtr[CpuID],
                       dly,
                       opt,
                       p_err);
@@ -132,7 +133,7 @@ void  OSTimeDly (OS_TICK   dly,
          OS_CRITICAL_EXIT_NO_SCHED();
          return;
     }
-    OS_RdyListRemove(OSTCBCurPtr);                          /* Remove current task from ready list                    */
+    OS_RdyListRemove(OSTCBCurPtr[CpuID]);                          /* Remove current task from ready list                    */
     OS_CRITICAL_EXIT_NO_SCHED();
     OSSched();                                              /* Find next task to run!                                 */
    *p_err = OS_ERR_NONE;
@@ -213,6 +214,7 @@ void  OSTimeDlyHMSM (CPU_INT16U   hours,
     OS_TICK      ticks;
     CPU_SR_ALLOC();
 
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 #ifdef OS_SAFETY_CRITICAL
@@ -304,8 +306,8 @@ void  OSTimeDlyHMSM (CPU_INT16U   hours,
 
     if (ticks > (OS_TICK)0u) {
         OS_CRITICAL_ENTER();
-        OSTCBCurPtr->TaskState = OS_TASK_STATE_DLY;
-        OS_TickListInsert(OSTCBCurPtr,
+        OSTCBCurPtr[CpuID]->TaskState = OS_TASK_STATE_DLY;
+        OS_TickListInsert(OSTCBCurPtr[CpuID],
                           ticks,
                           opt_time,
                           p_err);
@@ -313,7 +315,7 @@ void  OSTimeDlyHMSM (CPU_INT16U   hours,
              OS_CRITICAL_EXIT_NO_SCHED();
              return;
         }
-        OS_RdyListRemove(OSTCBCurPtr);                      /* Remove current task from ready list                    */
+        OS_RdyListRemove(OSTCBCurPtr[CpuID]);                      /* Remove current task from ready list                    */
         OS_CRITICAL_EXIT_NO_SCHED();
         OSSched();                                          /* Find next task to run!                                 */
        *p_err = OS_ERR_NONE;
@@ -351,6 +353,7 @@ void  OSTimeDlyResume (OS_TCB  *p_tcb,
 {
     CPU_SR_ALLOC();
 
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 #ifdef OS_SAFETY_CRITICAL
@@ -375,7 +378,7 @@ void  OSTimeDlyResume (OS_TCB  *p_tcb,
 #endif
 
     CPU_CRITICAL_ENTER();
-    if (p_tcb == OSTCBCurPtr) {                             /* Not possible for the running task to be delayed!       */
+    if (p_tcb == OSTCBCurPtr[CpuID]) {                             /* Not possible for the running task to be delayed!       */
        *p_err = OS_ERR_TASK_NOT_DLY;
         CPU_CRITICAL_EXIT();
         return;
@@ -531,6 +534,7 @@ void  OSTimeTick (void)
 #if OS_CFG_ISR_POST_DEFERRED_EN > 0u
     CPU_TS  ts;
 #endif
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
     OSTimeTickHook();                                       /* Call user definable hook                               */
@@ -555,7 +559,7 @@ void  OSTimeTick (void)
 
 
 #if OS_CFG_SCHED_ROUND_ROBIN_EN > 0u
-    OS_SchedRoundRobin(&OSRdyList[OSPrioCur]);
+    OS_SchedRoundRobin(&OSRdyList[OSPrioCur[CpuID]]);
 #endif
 
 #if OS_CFG_TMR_EN > 0u

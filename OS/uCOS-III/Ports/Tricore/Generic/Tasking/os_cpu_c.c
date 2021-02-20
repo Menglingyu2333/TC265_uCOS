@@ -51,6 +51,7 @@ const  CPU_CHAR  *os_cpu_c__c = "$Id: $";
 #include "IfxStm.h"
 #include "IfxCpu_reg.h"
 #include "SysSe/Bsp/Bsp.h"
+#include "IfxCpu.h"
 
 /*------------------------------------------------------------------------------------------------*/
 /*!
@@ -369,8 +370,19 @@ CPU_STK  *OSTaskStkInit (OS_TASK_PTR    p_task,
     OS_LCX* LowerCtx;
     CPU_INT32U LowerCtxLink;
 
-    p_stk = &p_stk_base[stk_size - 1];                          /* Load stack pointer                                     */
+    CPU_INT32U tmpFCX;
+    CPU_INT32U tmpLCX;
+    CPU_SR_ALLOC();
 
+    OS_CRITICAL_ENTER();
+
+    tmpFCX = __mfcr(CPU_FCX);
+    tmpLCX = __mfcr(CPU_LCX);
+
+    //Init CSA
+    IfxCpu_initCSA(&p_stk_base[stk_size - (TASK_CSA_NUM_DEFAULT * 16)], &p_stk_base[stk_size]);
+
+    p_stk = &p_stk_base[stk_size - (TASK_CSA_NUM_DEFAULT * 16)];                          /* Load stack pointer                                     */
 
     /* Unlink next two context's */
     UpperCtxLink = __mfcr(CPU_FCX);
@@ -391,7 +403,14 @@ CPU_STK  *OSTaskStkInit (OS_TASK_PTR    p_task,
     LowerCtx->_PC   = (CPU_INT32U*)p_task;
     LowerCtx->_A4   = (CPU_INT32U*)p_arg;
 
-    *p_stk = GET_LOWER_CTX_LINK(LowerCtxLink);
+    *--p_stk = __mfcr(CPU_LCX);
+    *--p_stk = __mfcr(CPU_FCX);
+    *--p_stk = GET_LOWER_CTX_LINK(LowerCtxLink);
+
+    __mtcr(CPU_FCX, tmpFCX);
+    __mtcr(CPU_LCX, tmpLCX);
+
+    OS_CRITICAL_EXIT();
 
     return (p_stk);
 }
@@ -422,6 +441,7 @@ void  OSTaskSwHook (void)
 #ifdef  CPU_CFG_INT_DIS_MEAS_EN
     CPU_TS  int_dis_time;
 #endif
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 
@@ -433,25 +453,25 @@ void  OSTaskSwHook (void)
 
 #if OS_CFG_TASK_PROFILE_EN > 0u
     ts = OS_TS_GET();
-    if (OSTCBCurPtr != OSTCBHighRdyPtr) {
-        OSTCBCurPtr->CyclesDelta  = ts - OSTCBCurPtr->CyclesStart;
-        OSTCBCurPtr->CyclesTotal += (OS_CYCLES)OSTCBCurPtr->CyclesDelta;
+    if (OSTCBCurPtr[CpuID] != OSTCBHighRdyPtr[CpuID]) {
+        OSTCBCurPtr[CpuID]->CyclesDelta  = ts - OSTCBCurPtr[CpuID]->CyclesStart;
+        OSTCBCurPtr[CpuID]->CyclesTotal += (OS_CYCLES)OSTCBCurPtr[CpuID]->CyclesDelta;
     }
 
-    OSTCBHighRdyPtr->CyclesStart = ts;
+    OSTCBHighRdyPtr[CpuID]->CyclesStart = ts;
 #endif
 
 #ifdef  CPU_CFG_INT_DIS_MEAS_EN
     int_dis_time = CPU_IntDisMeasMaxCurReset();             /* Keep track of per-task interrupt disable time          */
-    if (OSTCBCurPtr->IntDisTimeMax < int_dis_time) {
-        OSTCBCurPtr->IntDisTimeMax = int_dis_time;
+    if (OSTCBCurPtr[CpuID]->IntDisTimeMax < int_dis_time) {
+        OSTCBCurPtr[CpuID]->IntDisTimeMax = int_dis_time;
     }
 #endif
 
 #if OS_CFG_SCHED_LOCK_TIME_MEAS_EN > 0u
                                                             /* Keep track of per-task scheduler lock time             */
-    if (OSTCBCurPtr->SchedLockTimeMax < OSSchedLockTimeMaxCur) {
-        OSTCBCurPtr->SchedLockTimeMax = OSSchedLockTimeMaxCur;
+    if (OSTCBCurPtr[CpuID]->SchedLockTimeMax < OSSchedLockTimeMaxCur) {
+        OSTCBCurPtr[CpuID]->SchedLockTimeMax = OSSchedLockTimeMaxCur;
     }
     OSSchedLockTimeMaxCur = (CPU_TS)0;                      /* Reset the per-task value                               */
 #endif
@@ -504,13 +524,80 @@ static inline void OSResumeExecution(void)
 /*------------------------------------------------------------------------------------------------*/
 void OSStartHighRdy(void)
 {
-    OSRunning = TRUE;                                 /* OS is now running                        */
-
-    OSTCBCurPtr = &OSTCBDummy;                          /* dummy TCB for 1st context switch         */
-
-    OS_TASK_SW();                                     /* request a task switch to highest prio    */
+    CPU_INT08U i;
+    for(i = 1; i < CPU_CORE_NUM; i++){
+        OSTCBCurPtr[i] = &OSTCBDummy;                          /* dummy TCB for 1st context switch         */
+        OS_TASK_SW(i);                                     /* request a task switch to highest prio    */
+    }
+    OSTCBCurPtr[0] = &OSTCBDummy;                          /* dummy TCB for 1st context switch         */
+    OS_TASK_SW(0);                                     /* request a task switch to highest prio    */
 }
+#ifdef  SMP_EN
+/*------------------------------------------------------------------------------------------------*/
+/*! \brief             TASK CONTEXT SWITCH
+*
+*          In this uCOS implementation the dispatcher is invoked by a software trap or via
+*          OSIntCtxSw from interrupt it can be requested with the macro OS_TASK_SW()
+*
+* \note    the interrupt / trap vector code has to save the upper and (!) lower context of the
+*          interrupted task, then this function is invoked by a call (no jump or jump and link
+*          instructions!)
+*/
+/*------------------------------------------------------------------------------------------------*/
+void   __jump__   OSCtxSw(CPU_INT08U CpuID)
+{
+                                                      /*------------------------------------------*/
+    __dsync();                                        /* synchronize all data accesses            */
+//    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
+    /* get pointer to previous context (= current task context)                                   */
+    /* because OSCtxSw is reached via a call command from ISR vector / trap handler               */
+    /* current PCXI register points to one additional upper context where we can find the         */
+    /* current task context pointer:                                                              */
+    OS_UCX* ptUpperCTX = (OS_UCX*)GET_PHYS_ADDRESS((__mfcr(CPU_PCXI)));
+
+    if(OSTCBCurPtr[CpuID]->TaskState == (OS_STATE)OS_TASK_STATE_DEL){
+        CPU_INT32U prevLink = __mfcr(CPU_FCX);
+        CPU_INT32U currLink = __mfcr(CPU_PCXI);
+        while (ptUpperCTX->_PCXI != 0u)
+        {
+          CPU_INT32U tmpLink = ptUpperCTX->_PCXI;
+          ptUpperCTX->_PCXI = prevLink;
+          prevLink = currLink;
+          currLink = tmpLink;
+          ptUpperCTX = (OS_UCX*)GET_PHYS_ADDRESS(currLink);
+        }
+        ptUpperCTX->_PCXI = prevLink;
+        __mtcr(CPU_FCX, currLink);
+    }
+    else{
+        OS_UCX* ptCurTaskUCX = (OS_UCX*)GET_PHYS_ADDRESS(ptUpperCTX->_PCXI);
+        CPU_STK *CurTaskStk = (CPU_STK)ptCurTaskUCX->_A10;
+        *--CurTaskStk = __mfcr(CPU_LCX);
+        *--CurTaskStk = __mfcr(CPU_FCX);
+        *--CurTaskStk = __mfcr(CPU_PCXI);
+        OSTCBCurPtr[CpuID]->StkPtr = CurTaskStk;
+//        *((typeTaskPCXI*)(OSTCBCurPtr[CpuID]->StkPtr)) = ptUpperCTX->_PCXI;
+    }
+
+    OSTaskSwHook();                                   /* call user funktion for any task switch   */
+
+    OSTCBCurPtr[CpuID] = OSTCBHighRdyPtr[CpuID];      /* new highest prio task is current task    */
+    OSPrioCur[CpuID] = OSPrioHighRdy[CpuID];          /* new highest prio is now current prio     */
+
+    __mtcr(CPU_PCXI, (((__mfcr(CPU_PCXI))&0xFFC00000)|(*(typeTaskPCXI*)(OSTCBCurPtr[CpuID]->StkPtr++))));
+    __mtcr(CPU_FCX, *(typeTaskPCXI*)(OSTCBCurPtr[CpuID]->StkPtr++));
+    __mtcr(CPU_LCX, *(typeTaskPCXI*)(OSTCBCurPtr[CpuID]->StkPtr++));
+                                                      /* restore new task context pointer         */
+//    OSResumeExecution();                              /* resume execution of highest prio. task   */
+    __isync();                                        /* synchronize all data accesses            */
+
+    __asm("rslcx");
+    __asm("nop");
+    __asm("rfe");
+
+}
+#else
 /*------------------------------------------------------------------------------------------------*/
 /*! \brief             TASK CONTEXT SWITCH
 *
@@ -564,7 +651,7 @@ void OSCtxSw(void)
     OSResumeExecution();                              /* resume execution of highest prio. task   */
 
 }
-
+#endif
 /*------------------------------------------------------------------------------------------------*/
 /*! \brief             TASK SWITCH FROM INTERRUPT
 *
@@ -579,7 +666,7 @@ void OSCtxSw(void)
 *          task and invoke the interrupt handler via a call command.
 */
 /*------------------------------------------------------------------------------------------------*/
-void OSIntCtxSw(void)
+void OSIntCtxSw(CPU_INT08U CpuID)
 {
     __asm ("    movh.a  a11,#@his(j1)                  ; setup return address (label j1:)        \n"\
            "    lea     a11,[a11]@los(j1)              ; in A11                                  \n"\
@@ -587,8 +674,9 @@ void OSIntCtxSw(void)
            "j1: movh.a  a11,#@his(j2)                  ; setup return address (label j2:)        \n"\
            "    lea     a11,[a11]@los(j2)              ; in A11                                  \n"\
            "    ret                                    ; remove context from call to OSIntExit   \n"\
-           "j2: j       OSCtxSw                        ; jump to OSCtxSw()                       \n"\
-           : /* no outputs */ : /* no inputs */ : "a11");
+           "j2: MOV     D4,%0                          ; Store CpuID to D4                       \n"\
+           "    j       OSCtxSw                        ; jump to OSCtxSw()                       \n"\
+           : /* no outputs */ : "d" (CpuID) : "a11");
 }
 
 

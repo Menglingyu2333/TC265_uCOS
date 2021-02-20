@@ -14,11 +14,11 @@
 *
 * LICENSING TERMS:
 * ---------------
-*           uC/OS-III is provided in source form for FREE short-term evaluation, for educational use or 
+*           uC/OS-III is provided in source form for FREE short-term evaluation, for educational use or
 *           for peaceful research.  If you plan or intend to use uC/OS-III in a commercial application/
-*           product then, you need to contact Micrium to properly license uC/OS-III for its use in your 
-*           application/product.   We provide ALL the source code for your convenience and to help you 
-*           experience uC/OS-III.  The fact that the source is provided does NOT mean that you can use 
+*           product then, you need to contact Micrium to properly license uC/OS-III for its use in your
+*           application/product.   We provide ALL the source code for your convenience and to help you
+*           experience uC/OS-III.  The fact that the source is provided does NOT mean that you can use
 *           it commercially without paying a licensing fee.
 *
 *           Knowledge of the source code may NOT be used to develop a similar product.
@@ -346,6 +346,7 @@ void  OSMutexPend (OS_MUTEX  *p_mutex,
     OS_TCB       *p_tcb;
     CPU_SR_ALLOC();
 
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 #ifdef OS_SAFETY_CRITICAL
@@ -391,8 +392,8 @@ void  OSMutexPend (OS_MUTEX  *p_mutex,
 
     CPU_CRITICAL_ENTER();
     if (p_mutex->OwnerNestingCtr == (OS_NESTING_CTR)0) {    /* Resource available?                                    */
-        p_mutex->OwnerTCBPtr       =  OSTCBCurPtr;          /* Yes, caller may proceed                                */
-        p_mutex->OwnerOriginalPrio =  OSTCBCurPtr->Prio;
+        p_mutex->OwnerTCBPtr       =  OSTCBCurPtr[CpuID];          /* Yes, caller may proceed                                */
+        p_mutex->OwnerOriginalPrio =  OSTCBCurPtr[CpuID]->Prio;
         p_mutex->OwnerNestingCtr   = (OS_NESTING_CTR)1;
         if (p_ts != (CPU_TS *)0) {
            *p_ts  = p_mutex->TS;
@@ -402,7 +403,7 @@ void  OSMutexPend (OS_MUTEX  *p_mutex,
         return;
     }
 
-    if (OSTCBCurPtr == p_mutex->OwnerTCBPtr) {              /* See if current task is already the owner of the mutex  */
+    if (OSTCBCurPtr[CpuID] == p_mutex->OwnerTCBPtr) {              /* See if current task is already the owner of the mutex  */
         p_mutex->OwnerNestingCtr++;
         if (p_ts != (CPU_TS *)0) {
            *p_ts  = p_mutex->TS;
@@ -426,11 +427,11 @@ void  OSMutexPend (OS_MUTEX  *p_mutex,
                                                             /* Lock the scheduler/re-enable interrupts                */
     OS_CRITICAL_ENTER_CPU_EXIT();
     p_tcb = p_mutex->OwnerTCBPtr;                           /* Point to the TCB of the Mutex owner                    */
-    if (p_tcb->Prio > OSTCBCurPtr->Prio) {                  /* See if mutex owner has a lower priority than current   */
+    if (p_tcb->Prio > OSTCBCurPtr[CpuID]->Prio) {                  /* See if mutex owner has a lower priority than current   */
         switch (p_tcb->TaskState) {
             case OS_TASK_STATE_RDY:
                  OS_RdyListRemove(p_tcb);                   /* Remove from ready list at current priority             */
-                 p_tcb->Prio = OSTCBCurPtr->Prio;           /* Raise owner's priority                                 */
+                 p_tcb->Prio = OSTCBCurPtr[CpuID]->Prio;           /* Raise owner's priority                                 */
                  OS_PrioInsert(p_tcb->Prio);
                  OS_RdyListInsertHead(p_tcb);               /* Insert in ready list at new priority                   */
                  break;
@@ -438,7 +439,7 @@ void  OSMutexPend (OS_MUTEX  *p_mutex,
             case OS_TASK_STATE_DLY:
             case OS_TASK_STATE_DLY_SUSPENDED:
             case OS_TASK_STATE_SUSPENDED:
-                 p_tcb->Prio = OSTCBCurPtr->Prio;           /* Only need to raise the owner's priority                */
+                 p_tcb->Prio = OSTCBCurPtr[CpuID]->Prio;           /* Only need to raise the owner's priority                */
                  break;
 
             case OS_TASK_STATE_PEND:                        /* Change the position of the task in the wait list       */
@@ -446,7 +447,7 @@ void  OSMutexPend (OS_MUTEX  *p_mutex,
             case OS_TASK_STATE_PEND_SUSPENDED:
             case OS_TASK_STATE_PEND_TIMEOUT_SUSPENDED:
                  OS_PendListChangePrio(p_tcb,
-                                       OSTCBCurPtr->Prio);
+                                       OSTCBCurPtr[CpuID]->Prio);
                  break;
 
             default:
@@ -466,17 +467,17 @@ void  OSMutexPend (OS_MUTEX  *p_mutex,
     OSSched();                                              /* Find the next highest priority task ready to run       */
 
     CPU_CRITICAL_ENTER();
-    switch (OSTCBCurPtr->PendStatus) {
+    switch (OSTCBCurPtr[CpuID]->PendStatus) {
         case OS_STATUS_PEND_OK:                             /* We got the mutex                                       */
              if (p_ts != (CPU_TS *)0) {
-                *p_ts  = OSTCBCurPtr->TS;
+                *p_ts  = OSTCBCurPtr[CpuID]->TS;
              }
             *p_err = OS_ERR_NONE;
              break;
 
         case OS_STATUS_PEND_ABORT:                          /* Indicate that we aborted                               */
              if (p_ts != (CPU_TS *)0) {
-                *p_ts  = OSTCBCurPtr->TS;
+                *p_ts  = OSTCBCurPtr[CpuID]->TS;
              }
             *p_err = OS_ERR_PEND_ABORT;
              break;
@@ -490,7 +491,7 @@ void  OSMutexPend (OS_MUTEX  *p_mutex,
 
         case OS_STATUS_PEND_DEL:                            /* Indicate that object pended on has been deleted        */
              if (p_ts != (CPU_TS *)0) {
-                *p_ts  = OSTCBCurPtr->TS;
+                *p_ts  = OSTCBCurPtr[CpuID]->TS;
              }
             *p_err = OS_ERR_OBJ_DEL;
              break;
@@ -653,6 +654,7 @@ void  OSMutexPost (OS_MUTEX  *p_mutex,
     OS_TCB        *p_tcb;
     CPU_TS         ts;
     CPU_SR_ALLOC();
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 
@@ -694,7 +696,7 @@ void  OSMutexPost (OS_MUTEX  *p_mutex,
 #endif
 
     CPU_CRITICAL_ENTER();
-    if (OSTCBCurPtr != p_mutex->OwnerTCBPtr) {              /* Make sure the mutex owner is releasing the mutex       */
+    if (OSTCBCurPtr[CpuID] != p_mutex->OwnerTCBPtr) {              /* Make sure the mutex owner is releasing the mutex       */
         CPU_CRITICAL_EXIT();
        *p_err = OS_ERR_MUTEX_NOT_OWNER;
         return;
@@ -719,12 +721,12 @@ void  OSMutexPost (OS_MUTEX  *p_mutex,
         return;
     }
                                                             /* Yes                                                    */
-    if (OSTCBCurPtr->Prio != p_mutex->OwnerOriginalPrio) {
-        OS_RdyListRemove(OSTCBCurPtr);
-        OSTCBCurPtr->Prio = p_mutex->OwnerOriginalPrio;     /* Lower owner's priority back to its original one        */
-        OS_PrioInsert(OSTCBCurPtr->Prio);
-        OS_RdyListInsertTail(OSTCBCurPtr);                  /* Insert owner in ready list at new priority             */
-        OSPrioCur         = OSTCBCurPtr->Prio;
+    if (OSTCBCurPtr[CpuID]->Prio != p_mutex->OwnerOriginalPrio) {
+        OS_RdyListRemove(OSTCBCurPtr[CpuID]);
+        OSTCBCurPtr[CpuID]->Prio = p_mutex->OwnerOriginalPrio;     /* Lower owner's priority back to its original one        */
+        OS_PrioInsert(OSTCBCurPtr[CpuID]->Prio);
+        OS_RdyListInsertTail(OSTCBCurPtr[CpuID]);                  /* Insert owner in ready list at new priority             */
+        OSPrioCur[CpuID]  = OSTCBCurPtr[CpuID]->Prio;
     }
                                                             /* Get TCB from head of pend list                         */
     p_tcb                      = p_pend_list->HeadPtr->TCBPtr;

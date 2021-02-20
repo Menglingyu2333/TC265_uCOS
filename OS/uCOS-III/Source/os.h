@@ -12,11 +12,11 @@
 *
 * LICENSING TERMS:
 * ---------------
-*           uC/OS-III is provided in source form for FREE short-term evaluation, for educational use or 
+*           uC/OS-III is provided in source form for FREE short-term evaluation, for educational use or
 *           for peaceful research.  If you plan or intend to use uC/OS-III in a commercial application/
-*           product then, you need to contact Micrium to properly license uC/OS-III for its use in your 
-*           application/product.   We provide ALL the source code for your convenience and to help you 
-*           experience uC/OS-III.  The fact that the source is provided does NOT mean that you can use 
+*           product then, you need to contact Micrium to properly license uC/OS-III for its use in your
+*           application/product.   We provide ALL the source code for your convenience and to help you
+*           experience uC/OS-III.  The fact that the source is provided does NOT mean that you can use
 *           it commercially without paying a licensing fee.
 *
 *           Knowledge of the source code may NOT be used to develop a similar product.
@@ -63,6 +63,7 @@ extern "C" {
 #include <os_type.h>
 #include <os_cpu.h>
 
+#include "IfxCpu.h"
 
 /*
 ************************************************************************************************************************
@@ -753,13 +754,13 @@ struct  os_pend_list {
 ------------------------------------------------------------------------------------------------------------------------
 *                                                       PEND OBJ
 *
-* Note(s) : (1) The 'os_pend_obj' structure data type is a template/subset for specific kernel objects' data types: 
-*               'os_flag_grp', 'os_mutex', 'os_q', and 'os_sem'.  Each specific kernel object data type MUST define 
-*               ALL generic OS pend object parameters, synchronized in both the sequential order & data type of each 
+* Note(s) : (1) The 'os_pend_obj' structure data type is a template/subset for specific kernel objects' data types:
+*               'os_flag_grp', 'os_mutex', 'os_q', and 'os_sem'.  Each specific kernel object data type MUST define
+*               ALL generic OS pend object parameters, synchronized in both the sequential order & data type of each
 *               parameter.
 *
-*               Thus, ANY modification to the sequential order or data types of OS pend object parameters MUST be 
-*               appropriately synchronized between the generic OS pend object data type & ALL specific kernel objects' 
+*               Thus, ANY modification to the sequential order or data types of OS pend object parameters MUST be
+*               appropriately synchronized between the generic OS pend object data type & ALL specific kernel objects'
 *               data types.
 ------------------------------------------------------------------------------------------------------------------------
 */
@@ -1113,7 +1114,7 @@ OS_EXT           OS_APP_HOOK_VOID           OS_AppTimeTickHookPtr;
 
                                                                         /* IDLE TASK -------------------------------- */
 OS_EXT            OS_IDLE_CTR               OSIdleTaskCtr;
-OS_EXT            OS_TCB                    OSIdleTaskTCB;
+OS_EXT            OS_TCB                    OSIdleTaskTCB[CPU_CORE_NUM];
 
                                                                         /* MISCELLANEOUS ---------------------------- */
 OS_EXT            OS_NESTING_CTR            OSIntNestingCtr;            /* Interrupt nesting level                    */
@@ -1165,8 +1166,13 @@ OS_EXT            OS_OBJ_QTY                OSMutexQty;                 /* Numbe
 #endif
 
                                                                         /* PRIORITIES ------------------------------- */
+#ifdef SMP_EN
+OS_EXT            OS_PRIO                   OSPrioCur[CPU_CORE_NUM];    /* Priority of current task                   */
+OS_EXT            OS_PRIO                   OSPrioHighRdy[CPU_CORE_NUM];/* Priority of highest priority task          */
+#else
 OS_EXT            OS_PRIO                   OSPrioCur;                  /* Priority of current task                   */
 OS_EXT            OS_PRIO                   OSPrioHighRdy;              /* Priority of highest priority task          */
+#endif
 OS_EXT            OS_PRIO                   OSPrioSaved;                /* Saved priority level when Post Deferred    */
 extern            CPU_DATA                  OSPrioTbl[OS_PRIO_TBL_SIZE];
 
@@ -1250,9 +1256,13 @@ OS_EXT            OS_CTR                    OSTmrUpdateCtr;
 #endif
 
                                                                         /* TCBs ------------------------------------- */
+#ifdef  SMP_EN
+OS_EXT            OS_TCB                   *OSTCBCurPtr[CPU_CORE_NUM];  /* Pointer to currently running TCB           */
+OS_EXT            OS_TCB                   *OSTCBHighRdyPtr[CPU_CORE_NUM];/* Pointer to highest priority  TCB           */
+#else
 OS_EXT            OS_TCB                   *OSTCBCurPtr;                /* Pointer to currently running TCB           */
 OS_EXT            OS_TCB                   *OSTCBHighRdyPtr;            /* Pointer to highest priority  TCB           */
-
+#endif
 /*$PAGE*/
 /*
 ************************************************************************************************************************
@@ -1262,10 +1272,14 @@ OS_EXT            OS_TCB                   *OSTCBHighRdyPtr;            /* Point
 ************************************************************************************************************************
 */
 
-extern  CPU_STK     * const OSCfg_IdleTaskStkBasePtr;
-extern  CPU_STK_SIZE  const OSCfg_IdleTaskStkLimit;
-extern  CPU_STK_SIZE  const OSCfg_IdleTaskStkSize;
-extern  CPU_INT32U    const OSCfg_IdleTaskStkSizeRAM;
+extern  CPU_STK     * const OSCfg_IdleTaskStkBasePtr1;
+extern  CPU_STK_SIZE  const OSCfg_IdleTaskStkLimit1;
+extern  CPU_STK_SIZE  const OSCfg_IdleTaskStkSize1;
+extern  CPU_INT32U    const OSCfg_IdleTaskStkSizeRAM1;
+extern  CPU_STK     * const OSCfg_IdleTaskStkBasePtr2;
+extern  CPU_STK_SIZE  const OSCfg_IdleTaskStkLimit2;
+extern  CPU_STK_SIZE  const OSCfg_IdleTaskStkSize2;
+extern  CPU_INT32U    const OSCfg_IdleTaskStkSizeRAM2;
 
 extern  OS_INT_Q    * const OSCfg_IntQBasePtr;
 extern  OS_OBJ_QTY    const OSCfg_IntQSize;
@@ -1311,7 +1325,8 @@ extern  OS_OBJ_QTY    const OSCfg_TmrWheelSize;
 extern  CPU_INT32U    const OSCfg_TmrSizeRAM;
 
 
-extern  CPU_STK        OSCfg_IdleTaskStk[];
+extern  CPU_STK        OSCfg_IdleTaskStk1[];
+extern  CPU_STK        OSCfg_IdleTaskStk2[];
 
 #if (OS_CFG_ISR_POST_DEFERRED_EN > 0u)
 extern  CPU_STK        OSCfg_IntQTaskStk[];
@@ -1335,6 +1350,16 @@ extern  OS_TICK_SPOKE  OSCfg_TickWheel[];
 extern  CPU_STK        OSCfg_TmrTaskStk[];
 extern  OS_TMR_SPOKE   OSCfg_TmrWheel[];
 #endif
+
+/****** Multiple Core ******/
+#ifdef  SMP_EN
+#define GET_CORE_ID (__mfcr(CPU_CORE_ID))
+#endif
+/************/
+
+
+
+
 
 /*
 ************************************************************************************************************************
@@ -2073,7 +2098,7 @@ void          OS_PrioInsert             (OS_PRIO                prio);
 
 void          OS_PrioRemove             (OS_PRIO                prio);
 
-OS_PRIO       OS_PrioGetHighest         (void);
+void          OS_PrioGetHighest         (void);
 
 /* --------------------------------------------------- SCHEDULING --------------------------------------------------- */
 

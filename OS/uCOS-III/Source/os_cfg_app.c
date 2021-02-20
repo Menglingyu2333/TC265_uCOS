@@ -14,11 +14,11 @@
 *
 * LICENSING TERMS:
 * ---------------
-*           uC/OS-III is provided in source form for FREE short-term evaluation, for educational use or 
+*           uC/OS-III is provided in source form for FREE short-term evaluation, for educational use or
 *           for peaceful research.  If you plan or intend to use uC/OS-III in a commercial application/
-*           product then, you need to contact Micrium to properly license uC/OS-III for its use in your 
-*           application/product.   We provide ALL the source code for your convenience and to help you 
-*           experience uC/OS-III.  The fact that the source is provided does NOT mean that you can use 
+*           product then, you need to contact Micrium to properly license uC/OS-III for its use in your
+*           application/product.   We provide ALL the source code for your convenience and to help you
+*           experience uC/OS-III.  The fact that the source is provided does NOT mean that you can use
 *           it commercially without paying a licensing fee.
 *
 *           Knowledge of the source code may NOT be used to develop a similar product.
@@ -52,11 +52,12 @@ const  CPU_CHAR  *os_cfg_app__c = "$Id: $";
 ************************************************************************************************************************
 */
 
-CPU_STK        OSCfg_IdleTaskStk   [OS_CFG_IDLE_TASK_STK_SIZE];
+CPU_STK    __align(64)     OSCfg_IdleTaskStk1[OS_CFG_IDLE_TASK_STK_SIZE];
+CPU_STK    __align(64)     OSCfg_IdleTaskStk2[OS_CFG_IDLE_TASK_STK_SIZE];
 
 #if (OS_CFG_ISR_POST_DEFERRED_EN > 0u)
 OS_INT_Q       OSCfg_IntQ          [OS_CFG_INT_Q_SIZE];
-CPU_STK        OSCfg_IntQTaskStk   [OS_CFG_INT_Q_TASK_STK_SIZE];
+CPU_STK    __align(64)     OSCfg_IntQTaskStk   [OS_CFG_INT_Q_TASK_STK_SIZE];
 #endif
 
 #if (OS_CFG_ISR_STK_SIZE > 0u)
@@ -68,14 +69,14 @@ OS_MSG         OSCfg_MsgPool       [OS_CFG_MSG_POOL_SIZE];
 #endif
 
 #if (OS_CFG_STAT_TASK_EN > 0u)
-CPU_STK        OSCfg_StatTaskStk   [OS_CFG_STAT_TASK_STK_SIZE];
+CPU_STK    __align(64)     OSCfg_StatTaskStk   [OS_CFG_STAT_TASK_STK_SIZE];
 #endif
 
-CPU_STK        OSCfg_TickTaskStk   [OS_CFG_TICK_TASK_STK_SIZE];
+CPU_STK    __align(64)     OSCfg_TickTaskStk   [OS_CFG_TICK_TASK_STK_SIZE];
 OS_TICK_SPOKE  OSCfg_TickWheel     [OS_CFG_TICK_WHEEL_SIZE];
 
 #if (OS_CFG_TMR_EN > 0u)
-CPU_STK        OSCfg_TmrTaskStk    [OS_CFG_TMR_TASK_STK_SIZE];
+CPU_STK   __align(64)      OSCfg_TmrTaskStk    [OS_CFG_TMR_TASK_STK_SIZE];
 OS_TMR_SPOKE   OSCfg_TmrWheel      [OS_CFG_TMR_WHEEL_SIZE];
 #endif
 
@@ -86,10 +87,14 @@ OS_TMR_SPOKE   OSCfg_TmrWheel      [OS_CFG_TMR_WHEEL_SIZE];
 ************************************************************************************************************************
 */
 
-CPU_STK      * const  OSCfg_IdleTaskStkBasePtr   = (CPU_STK    *)&OSCfg_IdleTaskStk[0];
-CPU_STK_SIZE   const  OSCfg_IdleTaskStkLimit     = (CPU_STK_SIZE)OS_CFG_IDLE_TASK_STK_LIMIT;
-CPU_STK_SIZE   const  OSCfg_IdleTaskStkSize      = (CPU_STK_SIZE)OS_CFG_IDLE_TASK_STK_SIZE;
-CPU_INT32U     const  OSCfg_IdleTaskStkSizeRAM   = (CPU_INT32U  )sizeof(OSCfg_IdleTaskStk);
+CPU_STK      * const  OSCfg_IdleTaskStkBasePtr1   = (CPU_STK    *)&OSCfg_IdleTaskStk1[0];
+CPU_STK_SIZE   const  OSCfg_IdleTaskStkLimit1     = (CPU_STK_SIZE)OS_CFG_IDLE_TASK_STK_LIMIT;
+CPU_STK_SIZE   const  OSCfg_IdleTaskStkSize1      = (CPU_STK_SIZE)OS_CFG_IDLE_TASK_STK_SIZE;
+CPU_INT32U     const  OSCfg_IdleTaskStkSizeRAM1   = (CPU_INT32U  )sizeof(OSCfg_IdleTaskStk1);
+CPU_STK      * const  OSCfg_IdleTaskStkBasePtr2   = (CPU_STK    *)&OSCfg_IdleTaskStk2[0];
+CPU_STK_SIZE   const  OSCfg_IdleTaskStkLimit2     = (CPU_STK_SIZE)OS_CFG_IDLE_TASK_STK_LIMIT;
+CPU_STK_SIZE   const  OSCfg_IdleTaskStkSize2      = (CPU_STK_SIZE)OS_CFG_IDLE_TASK_STK_SIZE;
+CPU_INT32U     const  OSCfg_IdleTaskStkSizeRAM2   = (CPU_INT32U  )sizeof(OSCfg_IdleTaskStk2);
 
 
 #if (OS_CFG_ISR_POST_DEFERRED_EN > 0u)
@@ -191,7 +196,7 @@ CPU_INT32U     const  OSCfg_TmrWheelSizeRAM      = (CPU_INT32U  )0;
 ************************************************************************************************************************
 */
 
-CPU_INT32U     const  OSCfg_DataSizeRAM          = sizeof(OSCfg_IdleTaskStk)
+CPU_INT32U     const  OSCfg_DataSizeRAM          = sizeof(OSCfg_IdleTaskStk1)
 
 #if (OS_CFG_ISR_POST_DEFERRED_EN > 0u)
                                                  + sizeof(OSCfg_IntQ)
@@ -241,10 +246,14 @@ void  OSCfg_Init (void)
 {
     (void)&OSCfg_DataSizeRAM;
 
-    (void)&OSCfg_IdleTaskStkBasePtr;
-    (void)&OSCfg_IdleTaskStkLimit;
-    (void)&OSCfg_IdleTaskStkSize;
-    (void)&OSCfg_IdleTaskStkSizeRAM;
+    (void)&OSCfg_IdleTaskStkBasePtr1;
+    (void)&OSCfg_IdleTaskStkLimit1;
+    (void)&OSCfg_IdleTaskStkSize1;
+    (void)&OSCfg_IdleTaskStkSizeRAM1;
+    (void)&OSCfg_IdleTaskStkBasePtr2;
+    (void)&OSCfg_IdleTaskStkLimit2;
+    (void)&OSCfg_IdleTaskStkSize2;
+    (void)&OSCfg_IdleTaskStkSizeRAM2;
 
 #if (OS_CFG_ISR_POST_DEFERRED_EN > 0u)
     (void)&OSCfg_IntQBasePtr;

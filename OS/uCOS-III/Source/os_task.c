@@ -14,11 +14,11 @@
 *
 * LICENSING TERMS:
 * ---------------
-*           uC/OS-III is provided in source form for FREE short-term evaluation, for educational use or 
+*           uC/OS-III is provided in source form for FREE short-term evaluation, for educational use or
 *           for peaceful research.  If you plan or intend to use uC/OS-III in a commercial application/
-*           product then, you need to contact Micrium to properly license uC/OS-III for its use in your 
-*           application/product.   We provide ALL the source code for your convenience and to help you 
-*           experience uC/OS-III.  The fact that the source is provided does NOT mean that you can use 
+*           product then, you need to contact Micrium to properly license uC/OS-III for its use in your
+*           application/product.   We provide ALL the source code for your convenience and to help you
+*           experience uC/OS-III.  The fact that the source is provided does NOT mean that you can use
 *           it commercially without paying a licensing fee.
 *
 *           Knowledge of the source code may NOT be used to develop a similar product.
@@ -65,6 +65,7 @@ void  OSTaskChangePrio (OS_TCB   *p_tcb,
 {
     CPU_BOOLEAN   self;
     CPU_SR_ALLOC();
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 
@@ -96,7 +97,7 @@ void  OSTaskChangePrio (OS_TCB   *p_tcb,
 
     if (p_tcb == (OS_TCB *)0) {                             /* See if want to change priority of 'self'               */
         CPU_CRITICAL_ENTER();
-        p_tcb = OSTCBCurPtr;
+        p_tcb = OSTCBCurPtr[CpuID];
         CPU_CRITICAL_EXIT();
         self  = DEF_TRUE;
     } else {
@@ -219,7 +220,7 @@ void  OSTaskChangePrio (OS_TCB   *p_tcb,
 *                                 OS_OPT_TASK_STK_CLR         Clear the stack when the task is created
 *                                 OS_OPT_TASK_SAVE_FP         If the CPU has floating-point registers, save them
 *                                                             during a context switch.
-*                                 OS_OPT_TASK_NO_TLS          If the caller doesn't want or need TLS (Thread Local 
+*                                 OS_OPT_TASK_NO_TLS          If the caller doesn't want or need TLS (Thread Local
 *                                                             Storage) support for the task.  If you do not include this
 *                                                             option, TLS will be supported by default.
 *
@@ -462,6 +463,7 @@ void  OSTaskDel (OS_TCB  *p_tcb,
                  OS_ERR  *p_err)
 {
     CPU_SR_ALLOC();
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 
@@ -493,7 +495,7 @@ void  OSTaskDel (OS_TCB  *p_tcb,
 
     if (p_tcb == (OS_TCB *)0) {                             /* Delete 'Self'?                                         */
         CPU_CRITICAL_ENTER();
-        p_tcb  = OSTCBCurPtr;                               /* Yes.                                                   */
+        p_tcb  = OSTCBCurPtr[CpuID];                               /* Yes.                                                   */
         CPU_CRITICAL_EXIT();
     }
 
@@ -597,6 +599,7 @@ OS_MSG_QTY  OSTaskQFlush (OS_TCB  *p_tcb,
 {
     OS_MSG_QTY  entries;
     CPU_SR_ALLOC();
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 
@@ -616,7 +619,7 @@ OS_MSG_QTY  OSTaskQFlush (OS_TCB  *p_tcb,
 
     if (p_tcb == (OS_TCB *)0) {                             /* Flush message queue of calling task?                   */
         CPU_CRITICAL_ENTER();
-        p_tcb = OSTCBCurPtr;
+        p_tcb = OSTCBCurPtr[CpuID];
         CPU_CRITICAL_EXIT();
     }
 
@@ -680,6 +683,7 @@ void  *OSTaskQPend (OS_TICK       timeout,
     void         *p_void;
     CPU_SR_ALLOC();
 
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 #ifdef OS_SAFETY_CRITICAL
@@ -717,7 +721,7 @@ void  *OSTaskQPend (OS_TICK       timeout,
     }
 
     CPU_CRITICAL_ENTER();
-    p_msg_q = &OSTCBCurPtr->MsgQ;                           /* Any message waiting in the message queue?              */
+    p_msg_q = &OSTCBCurPtr[CpuID]->MsgQ;                           /* Any message waiting in the message queue?              */
     p_void  = OS_MsgQGet(p_msg_q,
                          p_msg_size,
                          p_ts,
@@ -725,9 +729,9 @@ void  *OSTaskQPend (OS_TICK       timeout,
     if (*p_err == OS_ERR_NONE) {
 #if OS_CFG_TASK_PROFILE_EN > 0u
         if (p_ts != (CPU_TS *)0) {
-            OSTCBCurPtr->MsgQPendTime = OS_TS_GET() - *p_ts;
-            if (OSTCBCurPtr->MsgQPendTimeMax < OSTCBCurPtr->MsgQPendTime) {
-                OSTCBCurPtr->MsgQPendTimeMax = OSTCBCurPtr->MsgQPendTime;
+            OSTCBCurPtr[CpuID]->MsgQPendTime = OS_TS_GET() - *p_ts;
+            if (OSTCBCurPtr[CpuID]->MsgQPendTimeMax < OSTCBCurPtr[CpuID]->MsgQPendTime) {
+                OSTCBCurPtr[CpuID]->MsgQPendTimeMax = OSTCBCurPtr[CpuID]->MsgQPendTime;
             }
         }
 #endif
@@ -755,18 +759,19 @@ void  *OSTaskQPend (OS_TICK       timeout,
     OS_CRITICAL_EXIT_NO_SCHED();
 
     OSSched();                                              /* Find the next highest priority task ready to run       */
+    CpuID = IfxCpu_getCoreId();
 
     CPU_CRITICAL_ENTER();
-    switch (OSTCBCurPtr->PendStatus) {
+    switch (OSTCBCurPtr[CpuID]->PendStatus) {
         case OS_STATUS_PEND_OK:                             /* Extract message from TCB (Put there by Post)           */
-             p_void      = OSTCBCurPtr->MsgPtr;
-            *p_msg_size  = OSTCBCurPtr->MsgSize;
+             p_void      = OSTCBCurPtr[CpuID]->MsgPtr;
+            *p_msg_size  = OSTCBCurPtr[CpuID]->MsgSize;
              if (p_ts != (CPU_TS *)0) {
-                *p_ts  = OSTCBCurPtr->TS;
+                *p_ts  = OSTCBCurPtr[CpuID]->TS;
 #if OS_CFG_TASK_PROFILE_EN > 0u
-                OSTCBCurPtr->MsgQPendTime = OS_TS_GET() - OSTCBCurPtr->TS;
-                if (OSTCBCurPtr->MsgQPendTimeMax < OSTCBCurPtr->MsgQPendTime) {
-                    OSTCBCurPtr->MsgQPendTimeMax = OSTCBCurPtr->MsgQPendTime;
+                OSTCBCurPtr[CpuID]->MsgQPendTime = OS_TS_GET() - OSTCBCurPtr[CpuID]->TS;
+                if (OSTCBCurPtr[CpuID]->MsgQPendTimeMax < OSTCBCurPtr[CpuID]->MsgQPendTime) {
+                    OSTCBCurPtr[CpuID]->MsgQPendTimeMax = OSTCBCurPtr[CpuID]->MsgQPendTime;
                 }
 #endif
              }
@@ -787,7 +792,7 @@ void  *OSTaskQPend (OS_TICK       timeout,
              p_void     = (void      *)0;
             *p_msg_size = (OS_MSG_SIZE)0;
              if (p_ts  != (CPU_TS *)0) {
-                *p_ts   =  OSTCBCurPtr->TS;
+                *p_ts   =  OSTCBCurPtr[CpuID]->TS;
              }
             *p_err      =  OS_ERR_TIMEOUT;
              break;
@@ -833,6 +838,7 @@ CPU_BOOLEAN  OSTaskQPendAbort (OS_TCB  *p_tcb,
     CPU_TS         ts;
     CPU_SR_ALLOC();
 
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 #ifdef OS_SAFETY_CRITICAL
@@ -864,7 +870,7 @@ CPU_BOOLEAN  OSTaskQPendAbort (OS_TCB  *p_tcb,
     CPU_CRITICAL_ENTER();
 #if OS_CFG_ARG_CHK_EN > 0u
     if ((p_tcb == (OS_TCB *)0) ||                           /* Pend abort self?                                       */
-        (p_tcb == OSTCBCurPtr)) {
+        (p_tcb == OSTCBCurPtr[CpuID])) {
         CPU_CRITICAL_EXIT();
        *p_err = OS_ERR_PEND_ABORT_SELF;                     /* ... doesn't make sense                                 */
         return (DEF_FALSE);
@@ -1015,6 +1021,7 @@ OS_REG  OSTaskRegGet (OS_TCB     *p_tcb,
 {
     OS_REG     value;
     CPU_SR_ALLOC();
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 
@@ -1034,7 +1041,7 @@ OS_REG  OSTaskRegGet (OS_TCB     *p_tcb,
 
     CPU_CRITICAL_ENTER();
     if (p_tcb == (OS_TCB *)0) {
-        p_tcb = OSTCBCurPtr;
+        p_tcb = OSTCBCurPtr[CpuID];
     }
     value = p_tcb->RegTbl[id];
     CPU_CRITICAL_EXIT();
@@ -1054,7 +1061,7 @@ OS_REG  OSTaskRegGet (OS_TCB     *p_tcb,
 * Arguments  : p_err       is a pointer to a variable that will hold an error code related to this call.
 *
 *                            OS_ERR_NONE               if the call was successful
-*                            OS_ERR_NO_MORE_ID_AVAIL   if you are attempting to assign more task register IDs than you 
+*                            OS_ERR_NO_MORE_ID_AVAIL   if you are attempting to assign more task register IDs than you
 *                                                           have available through OS_CFG_TASK_REG_TBL_SIZE.
 *
 * Returns    : The next available task register 'id' or OS_CFG_TASK_REG_TBL_SIZE if an error is detected.
@@ -1082,7 +1089,7 @@ OS_REG_ID  OSTaskRegGetID (OS_ERR  *p_err)
         CPU_CRITICAL_EXIT();
         return ((OS_REG_ID)OS_CFG_TASK_REG_TBL_SIZE);
     }
-     
+
     id    = OSTaskRegNextAvailID;								  /* Assign the next available ID                     */
     OSTaskRegNextAvailID++;										  /* Increment available ID for next request          */
     CPU_CRITICAL_EXIT();
@@ -1124,6 +1131,7 @@ void  OSTaskRegSet (OS_TCB     *p_tcb,
                     OS_ERR     *p_err)
 {
     CPU_SR_ALLOC();
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 
@@ -1143,7 +1151,7 @@ void  OSTaskRegSet (OS_TCB     *p_tcb,
 
     CPU_CRITICAL_ENTER();
     if (p_tcb == (OS_TCB *)0) {
-        p_tcb = OSTCBCurPtr;
+        p_tcb = OSTCBCurPtr[CpuID];
     }
     p_tcb->RegTbl[id] = value;
     CPU_CRITICAL_EXIT();
@@ -1178,6 +1186,7 @@ void  OSTaskResume (OS_TCB  *p_tcb,
                     OS_ERR  *p_err)
 {
     CPU_SR_ALLOC();
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 
@@ -1200,7 +1209,7 @@ void  OSTaskResume (OS_TCB  *p_tcb,
     CPU_CRITICAL_ENTER();
 #if OS_CFG_ARG_CHK_EN > 0u
     if ((p_tcb == (OS_TCB *)0) ||                           /* We cannot resume 'self'                                */
-        (p_tcb == OSTCBCurPtr)) {
+        (p_tcb == OSTCBCurPtr[CpuID])) {
         CPU_CRITICAL_EXIT();
        *p_err  = OS_ERR_TASK_RESUME_SELF;
         return;
@@ -1267,6 +1276,7 @@ OS_SEM_CTR  OSTaskSemPend (OS_TICK   timeout,
 {
     OS_SEM_CTR    ctr;
     CPU_SR_ALLOC();
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 
@@ -1301,16 +1311,16 @@ OS_SEM_CTR  OSTaskSemPend (OS_TICK   timeout,
     }
 
     CPU_CRITICAL_ENTER();
-    if (OSTCBCurPtr->SemCtr > (OS_SEM_CTR)0) {              /* See if task already been signaled                      */
-        OSTCBCurPtr->SemCtr--;
-        ctr    = OSTCBCurPtr->SemCtr;
+    if (OSTCBCurPtr[CpuID]->SemCtr > (OS_SEM_CTR)0) {              /* See if task already been signaled                      */
+        OSTCBCurPtr[CpuID]->SemCtr--;
+        ctr    = OSTCBCurPtr[CpuID]->SemCtr;
         if (p_ts != (CPU_TS *)0) {
-           *p_ts  = OSTCBCurPtr->TS;
+           *p_ts  = OSTCBCurPtr[CpuID]->TS;
         }
 #if OS_CFG_TASK_PROFILE_EN > 0u
-        OSTCBCurPtr->SemPendTime = OS_TS_GET() - OSTCBCurPtr->TS;
-        if (OSTCBCurPtr->SemPendTimeMax < OSTCBCurPtr->SemPendTime) {
-            OSTCBCurPtr->SemPendTimeMax = OSTCBCurPtr->SemPendTime;
+        OSTCBCurPtr[CpuID]->SemPendTime = OS_TS_GET() - OSTCBCurPtr[CpuID]->TS;
+        if (OSTCBCurPtr[CpuID]->SemPendTimeMax < OSTCBCurPtr[CpuID]->SemPendTime) {
+            OSTCBCurPtr[CpuID]->SemPendTimeMax = OSTCBCurPtr[CpuID]->SemPendTime;
         }
 #endif
         CPU_CRITICAL_EXIT();
@@ -1330,7 +1340,7 @@ OS_SEM_CTR  OSTaskSemPend (OS_TICK   timeout,
         }
     }
                                                             /* Lock the scheduler/re-enable interrupts                */
-    OS_CRITICAL_ENTER_CPU_EXIT();                           
+    OS_CRITICAL_ENTER_CPU_EXIT();
     OS_Pend((OS_PEND_DATA *)0,                              /* Block task pending on Signal                           */
             (OS_PEND_OBJ  *)0,
             (OS_STATE      )OS_TASK_PEND_ON_TASK_SEM,
@@ -1338,16 +1348,17 @@ OS_SEM_CTR  OSTaskSemPend (OS_TICK   timeout,
     OS_CRITICAL_EXIT_NO_SCHED();
 
     OSSched();                                              /* Find next highest priority task ready to run           */
+    CpuID = IfxCpu_getCoreId();
 
     CPU_CRITICAL_ENTER();
-    switch (OSTCBCurPtr->PendStatus) {                      /* See if we timed-out or aborted                         */
+    switch (OSTCBCurPtr[CpuID]->PendStatus) {                      /* See if we timed-out or aborted                         */
         case OS_STATUS_PEND_OK:
              if (p_ts != (CPU_TS *)0) {
-                *p_ts                    =  OSTCBCurPtr->TS;
+                *p_ts                    =  OSTCBCurPtr[CpuID]->TS;
 #if OS_CFG_TASK_PROFILE_EN > 0u
-                OSTCBCurPtr->SemPendTime = OS_TS_GET() - OSTCBCurPtr->TS;
-                if (OSTCBCurPtr->SemPendTimeMax < OSTCBCurPtr->SemPendTime) {
-                    OSTCBCurPtr->SemPendTimeMax = OSTCBCurPtr->SemPendTime;
+                OSTCBCurPtr[CpuID]->SemPendTime = OS_TS_GET() - OSTCBCurPtr[CpuID]->TS;
+                if (OSTCBCurPtr[CpuID]->SemPendTimeMax < OSTCBCurPtr[CpuID]->SemPendTime) {
+                    OSTCBCurPtr[CpuID]->SemPendTimeMax = OSTCBCurPtr[CpuID]->SemPendTime;
                 }
 #endif
              }
@@ -1356,7 +1367,7 @@ OS_SEM_CTR  OSTaskSemPend (OS_TICK   timeout,
 
         case OS_STATUS_PEND_ABORT:
              if (p_ts != (CPU_TS *)0) {
-                *p_ts  =  OSTCBCurPtr->TS;
+                *p_ts  =  OSTCBCurPtr[CpuID]->TS;
              }
             *p_err = OS_ERR_PEND_ABORT;                     /* Indicate that we aborted                               */
              break;
@@ -1372,7 +1383,7 @@ OS_SEM_CTR  OSTaskSemPend (OS_TICK   timeout,
             *p_err = OS_ERR_STATUS_INVALID;
              break;
     }
-    ctr = OSTCBCurPtr->SemCtr;
+    ctr = OSTCBCurPtr[CpuID]->SemCtr;
     CPU_CRITICAL_EXIT();
     return (ctr);
 }
@@ -1413,6 +1424,7 @@ CPU_BOOLEAN  OSTaskSemPendAbort (OS_TCB  *p_tcb,
 {
     CPU_TS         ts;
     CPU_SR_ALLOC();
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 
@@ -1444,7 +1456,7 @@ CPU_BOOLEAN  OSTaskSemPendAbort (OS_TCB  *p_tcb,
 
     CPU_CRITICAL_ENTER();
     if ((p_tcb == (OS_TCB *)0) ||                           /* Pend abort self?                                       */
-        (p_tcb == OSTCBCurPtr)) {
+        (p_tcb == OSTCBCurPtr[CpuID])) {
         CPU_CRITICAL_EXIT();                                /* ... doesn't make sense!                                */
        *p_err = OS_ERR_PEND_ABORT_SELF;
         return (DEF_FALSE);
@@ -1574,6 +1586,7 @@ OS_SEM_CTR  OSTaskSemSet (OS_TCB      *p_tcb,
 {
     OS_SEM_CTR  ctr;
     CPU_SR_ALLOC();
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 
@@ -1593,7 +1606,7 @@ OS_SEM_CTR  OSTaskSemSet (OS_TCB      *p_tcb,
 
     CPU_CRITICAL_ENTER();
     if (p_tcb == (OS_TCB *)0) {
-        p_tcb = OSTCBCurPtr;
+        p_tcb = OSTCBCurPtr[CpuID];
     }
     ctr           = p_tcb->SemCtr;
     p_tcb->SemCtr = (OS_SEM_CTR)cnt;
@@ -1636,6 +1649,7 @@ void  OSTaskStkChk (OS_TCB        *p_tcb,
     CPU_STK_SIZE  free_stk;
     CPU_STK      *p_stk;
     CPU_SR_ALLOC();
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 
@@ -1667,7 +1681,7 @@ void  OSTaskStkChk (OS_TCB        *p_tcb,
 
     CPU_CRITICAL_ENTER();
     if (p_tcb == (OS_TCB *)0) {                             /* Check the stack of the current task?                   */
-        p_tcb = OSTCBCurPtr;                                /* Yes                                                    */
+        p_tcb = OSTCBCurPtr[CpuID];                                /* Yes                                                    */
     }
 
     if (p_tcb->StkPtr == (CPU_STK*)0) {                     /* Make sure task exist                                   */
@@ -1809,6 +1823,7 @@ void  OSTaskTimeQuantaSet (OS_TCB   *p_tcb,
                            OS_ERR   *p_err)
 {
     CPU_SR_ALLOC();
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 
@@ -1828,7 +1843,7 @@ void  OSTaskTimeQuantaSet (OS_TCB   *p_tcb,
 
     CPU_CRITICAL_ENTER();
     if (p_tcb == (OS_TCB *)0) {
-        p_tcb = OSTCBCurPtr;
+        p_tcb = OSTCBCurPtr[CpuID];
     }
 
     if (time_quanta == 0u) {
@@ -2133,12 +2148,13 @@ void  OS_TaskQPost (OS_TCB       *p_tcb,
                     OS_ERR       *p_err)
 {
     CPU_SR_ALLOC();
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 
     OS_CRITICAL_ENTER();
     if (p_tcb == (OS_TCB *)0) {                             /* Post msg to 'self'?                                    */
-        p_tcb = OSTCBCurPtr;
+        p_tcb = OSTCBCurPtr[CpuID];
     }
    *p_err  = OS_ERR_NONE;                                   /* Assume we won't have any errors                        */
     switch (p_tcb->TaskState) {
@@ -2293,10 +2309,11 @@ void  OS_TaskResume (OS_TCB  *p_tcb,
 void  OS_TaskReturn (void)
 {
     OS_ERR  err;
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 
-    OSTaskReturnHook(OSTCBCurPtr);                          /* Call hook to let user decide on what to do             */
+    OSTaskReturnHook(OSTCBCurPtr[CpuID]);                          /* Call hook to let user decide on what to do             */
 #if OS_CFG_TASK_DEL_EN > 0u
     OSTaskDel((OS_TCB *)0,                                  /* Delete task if it accidentally returns!                */
               (OS_ERR *)&err);
@@ -2347,12 +2364,13 @@ OS_SEM_CTR  OS_TaskSemPost (OS_TCB  *p_tcb,
 {
     OS_SEM_CTR  ctr;
     CPU_SR_ALLOC();
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 
     OS_CRITICAL_ENTER();
     if (p_tcb == (OS_TCB *)0) {                             /* Post signal to 'self'?                                 */
-        p_tcb = OSTCBCurPtr;
+        p_tcb = OSTCBCurPtr[CpuID];
     }
     p_tcb->TS = ts;
    *p_err     = OS_ERR_NONE;                                /* Assume we won't have any errors                        */
@@ -2488,15 +2506,16 @@ void   OS_TaskSuspend (OS_TCB  *p_tcb,
                        OS_ERR  *p_err)
 {
     CPU_SR_ALLOC();
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 
     CPU_CRITICAL_ENTER();
     if (p_tcb == (OS_TCB *)0) {                             /* See if specified to suspend self                       */
-        p_tcb = OSTCBCurPtr;
+        p_tcb = OSTCBCurPtr[CpuID];
     }
 
-    if (p_tcb == OSTCBCurPtr) {
+    if (p_tcb == OSTCBCurPtr[CpuID]) {
         if (OSSchedLockNestingCtr > (OS_NESTING_CTR)0) {    /* Can't suspend when the scheduler is locked             */
             CPU_CRITICAL_EXIT();
            *p_err = OS_ERR_SCHED_LOCKED;
