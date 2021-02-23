@@ -47,9 +47,12 @@
 *********************************************************************************************************
 */
 
-#define  APP_TASK_START_PRIO                        2
+#define  CORE0_TASK_CREATE_PRIO                     2
+#define  CORE1_TASK_CREATE_PRIO                     3
 #define  APP_TASK_1_PRIO                            4
-#define  APP_TASK_2_PRIO                            6
+#define  APP_TASK_2_PRIO                            4
+#define  APP_TASK_3_PRIO                           18
+#define  APP_TASK_4_PRIO                           16
 
 
 /*
@@ -59,9 +62,12 @@
 *********************************************************************************************************
 */
 
-#define  APP_TASK_START_STK_SIZE                    128
-#define  APP_TASK_1_STK_SIZE                        128
-#define  APP_TASK_2_STK_SIZE                        128
+#define  CORE0_TASK_CREATE_STK_SIZE                  512u
+#define  CORE1_TASK_CREATE_STK_SIZE                  512u
+#define  APP_TASK_1_STK_SIZE                         512u
+#define  APP_TASK_2_STK_SIZE                         512u
+#define  APP_TASK_3_STK_SIZE                         512u
+#define  APP_TASK_4_STK_SIZE                         512u
 
 
 /*

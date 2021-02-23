@@ -10,6 +10,14 @@
 # Automatically-generated file. Do not edit!
 ################################################################################
 
+################################################################################
+# Automatically-generated file. Do not edit!
+################################################################################
+
+################################################################################
+# Automatically-generated file. Do not edit!
+################################################################################
+
 IfxDsadc.o :	../Libraries/iLLD/TC26B/Tricore/Dsadc/Std/IfxDsadc.c
 ../Libraries/iLLD/TC26B/Tricore/Dsadc/Std/IfxDsadc.c :
 IfxDsadc.o :	../Configurations/Ifx_Cfg.h

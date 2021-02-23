@@ -34,6 +34,8 @@
 #ifndef  OS_CPU_H
 #define  OS_CPU_H
 #include "cpu.h"
+#include "IfxInt_reg.h"
+#include "Bsp.h"
 
 #ifdef   OS_CPU_GLOBALS
 #define  OS_CPU_EXT
@@ -47,13 +49,32 @@
 *********************************************************************************************************
 */
 typedef struct os_tcb_ctx_ext {                       /*!< \brief OS: TriCore TCB extension       */
-    CPU_INT32U TaskPCXI;                                  /*!< \brief OS: ptr to previous tsk context */
+    CPU_INT08U CoreID;                                  /*!< \brief OS: Core ID of task */
 } OS_TCB_CTX_EXT;
 
 typedef CPU_INT32U typeTaskPCXI;
 
-#define  OS_SYSCALL_CTXSW       0
-#define  OS_TASK_SW()           __syscall(OS_SYSCALL_CTXSW)
+//#define  OS_SYSCALL_CTXSW       0
+//#define  OS_TASK_SW()           __syscall(OS_SYSCALL_CTXSW)
+#define  OS_TASK_SW_CPU0()      INT_SRB0.B.TRIG0 = 1
+#define  OS_TASK_SW_CPU1()      INT_SRB0.B.TRIG1 = 1
+
+
+inline void OS_TASK_SW(CPU_INT08U CpuID)
+{
+    switch (CpuID)
+    {
+        case 0:
+            OS_TASK_SW_CPU0();
+            break;
+        case 1:
+            OS_TASK_SW_CPU1();
+            break;
+        default:
+            break;
+    }
+
+}
 
 /*
 *********************************************************************************************************
@@ -126,7 +147,7 @@ OS_CPU_EXT  CPU_STK  *OS_CPU_ExceptStkBase;
 */
 
 void  OSStartHighRdy       (void);
-void  OSCtxSw(void);
-void  OSIntCtxSw(void);
+void   __jump__   OSCtxSw(CPU_INT08U CpuID);
+void   __jump__   OSIntCtxSw(CPU_INT08U CpuID);
 
 #endif

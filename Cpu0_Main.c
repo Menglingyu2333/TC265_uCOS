@@ -121,28 +121,36 @@ void CAN_SendSingle(IfxMultican_Can_MsgObj *MO, uint32 id, uint32 high, uint32 l
 {
     // Initialise the message strcture
     IfxMultican_Message txMsg;
-    IfxMultican_Message_init(&txMsg, id, low, high, IfxMultican_DataLengthCode_8);
+    IfxMultican_Message_init(&txMsg, id, high, low, IfxMultican_DataLengthCode_8);
     IfxMultican_Can_MsgObj_sendMessage(MO, &txMsg);
 }
 
 
 //OS
-static  OS_TCB          AppTaskStartTCB;
-static  CPU_STK         AppTaskStartStk[APP_TASK_START_STK_SIZE];
+static  OS_TCB          Core0TaskCreateTCB;
+static  CPU_STK         Core0TaskCreateStk[CORE0_TASK_CREATE_STK_SIZE];
+static  OS_TCB_CTX_EXT  Core0TaskCreateExt;
 static  OS_TCB          AppTask1TCB;
 static  CPU_STK         AppTask1Stk[APP_TASK_1_STK_SIZE];
+static  OS_TCB_CTX_EXT  AppTask1Ext;
 static  OS_TCB          AppTask2TCB;
 static  CPU_STK         AppTask2Stk[APP_TASK_2_STK_SIZE];
+static  OS_TCB_CTX_EXT  AppTask2Ext;
 
 
 
-static  void    AppTaskCreate (void);
+static  void    Core0TaskCreate (void);
 static  void    AppObjCreate  (void);
-static  void    AppTaskStart  (void *p_arg);
+static  void    AppTaskCreate  (void);
 static  void    BSP_Init(void);
 void    PeriodicTimerTask(OS_TMR *p_tmr, void *p_arg);
 OS_TMR  TaskTimer1;
 OS_SEM  Sem1;
+
+CPU_INT32U SyncFlag1 = 0;
+CPU_INT32U SyncFlag2 = 0;
+CPU_INT32U FCX_VALUE;
+CPU_INT32U LCX_VALUE;
 
 int core0_main(void)
 {
@@ -155,30 +163,52 @@ int core0_main(void)
     IfxScuWdt_disableCpuWatchdog(IfxScuWdt_getCpuWatchdogPassword());
     IfxScuWdt_disableSafetyWatchdog(IfxScuWdt_getSafetyWatchdogPassword());
 
+    BSP_Init();
+
     /* Wait for CPU sync event */
     IfxCpu_emitEvent(&g_cpuSyncEvent);
     IfxCpu_waitEvent(&g_cpuSyncEvent, 1);
-
+//    while(SyncFlag == 1);
     IfxCpu_disableInterrupts();     //BSP_IntDisAll();          /* Disable all interrupts.                              */
-    BSP_Init();
+    OSTaskSwIntInit();
 
     OS_CPU_SysTickInit((CPU_INT32U)(TimeConst_1s)/OSCfg_TickRate_Hz);                                   /* Init uC/OS periodic time src (SysTick).              */
 
     OSInit(&err);                                               /* Init uC/OS-III.                                      */
 
-    OSTaskCreate((OS_TCB     *)&AppTaskStartTCB,                /* Create the start task                                */
-                 (CPU_CHAR   *)"App Task Start",
-                 (OS_TASK_PTR ) AppTaskStart,
+    CPU_Init();
+
+    Mem_Init();                                                 /* Initialize Memory Management Module                  */
+
+#if OS_CFG_STAT_TASK_EN > 0u
+    OSStatTaskCPUUsageInit(&err);                               /* Compute CPU capacity with no task running            */
+#endif
+
+//    CPU_IntDisMeasMaxCurReset();
+
+#if (APP_CFG_SERIAL_EN == DEF_ENABLED)
+    BSP_Ser_Init(115200);                                       /* Enable Serial Interface                              */
+#endif
+    SyncFlag1 = 1;                                               /* Start core1 */
+
+
+    Core0TaskCreateExt.CoreID = 0;
+
+    OSTaskCreate((OS_TCB     *)&Core0TaskCreateTCB,                /* Create the start task                                */
+                 (CPU_CHAR   *)"Core0 Task Create",
+                 (OS_TASK_PTR ) Core0TaskCreate,
                  (void       *) 0,
-                 (OS_PRIO     ) APP_TASK_START_PRIO,
-                 (CPU_STK    *)&AppTaskStartStk[0],
-                 (CPU_STK_SIZE) APP_TASK_START_STK_SIZE / 10,
-                 (CPU_STK_SIZE) APP_TASK_START_STK_SIZE,
+                 (OS_PRIO     ) CORE0_TASK_CREATE_PRIO,
+                 (CPU_STK    *)&Core0TaskCreateStk[0],
+                 (CPU_STK_SIZE) CORE0_TASK_CREATE_STK_SIZE / 10,
+                 (CPU_STK_SIZE) CORE0_TASK_CREATE_STK_SIZE,
                  (OS_MSG_QTY  ) 5u,
                  (OS_TICK     ) 0u,
-                 (void       *) 0,
+                 (void       *)&Core0TaskCreateExt,
                  (OS_OPT      )(OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
                  (OS_ERR     *)&err);
+    while(SyncFlag2 == 0);                                       /* Start core1 */
+    IfxCpu_enableInterrupts();
     OSStart(&err);                                              /* Start multitasking (i.e. give control to uC/OS-III). */
     while(1);
     return (1);
@@ -201,7 +231,7 @@ static  void    BSP_Init()
 * Description : This is an example of a startup task.  As mentioned in the book's text, you MUST
 *               initialize the ticker only once multitasking has started.
 *
-* Arguments   : p_arg   is the argument passed to 'AppTaskStart()' by 'OSTaskCreate()'.
+* Arguments   : p_arg   is the argument passed to 'Core0TaskCreate()' by 'OSTaskCreate()'.
 *
 * Returns     : none
 *
@@ -210,25 +240,10 @@ static  void    BSP_Init()
 *********************************************************************************************************
 */
 
-static  void  AppTaskStart (void *p_arg)
+static  void  Core0TaskCreate (void)
 {
     OS_ERR      err;
 
-   (void)p_arg;
-
-    CPU_Init();
-
-    Mem_Init();                                                 /* Initialize Memory Management Module                  */
-
-#if OS_CFG_STAT_TASK_EN > 0u
-    OSStatTaskCPUUsageInit(&err);                               /* Compute CPU capacity with no task running            */
-#endif
-
-    CPU_IntDisMeasMaxCurReset();
-
-#if (APP_CFG_SERIAL_EN == DEF_ENABLED)
-    BSP_Ser_Init(115200);                                       /* Enable Serial Interface                              */
-#endif
 
 //    APP_TRACE_INFO(("Creating Application Tasks...\n\r"));
     AppTaskCreate();                                            /* Create Application Tasks                             */
@@ -237,12 +252,12 @@ static  void  AppTaskStart (void *p_arg)
     AppObjCreate();                                             /* Create Application Objects                           */
 
 //    BSP_LED_Off(0);
-
+    OSTaskDel(&Core0TaskCreateTCB, &err);
     while (DEF_TRUE) {                                          /* Task body, always written as an infinite loop.       */
-        OSTimeDlyHMSM(0, 0, 1, 0,
+        OSTimeDlyHMSM(0, 0, 1, 654,
                       OS_OPT_TIME_HMSM_STRICT,
                       &err);
-        CAN_SendSingle(&canMsgObj0, 0x002, 0x0000, 0x0000);
+        CAN_SendSingle(&canMsgObj0, 0x100, 0x0000, 0x0000);
     }
 }
 
@@ -261,17 +276,21 @@ static  void  AppTaskStart (void *p_arg)
 void AppTask1 ()
 {
     OS_ERR       err;
-    OSTimeDlyHMSM(0, 0, 0, 100,
+//    IfxCpu_Id   CpuID;
+
+
+    OSTimeDlyHMSM(0, 0, 0, 111,
                   OS_OPT_TIME_HMSM_STRICT,
                   &err);
-    CAN_SendSingle(&canMsgObj0, 0x101, 0x0000, 0x0000);
+    CAN_SendSingle(&canMsgObj0, 0x111, 0x0000, 0x0000);
 
     while (TRUE) {
-        OSTimeDlyHMSM(0, 0, 0, 100,
+        OSTimeDlyHMSM(0, 0, 1, 112,
                       OS_OPT_TIME_HMSM_STRICT,
                       &err);
         IfxPort_togglePin(&MODULE_P14, 9);
-        CAN_SendSingle(&canMsgObj0, 0x102, 0x0000, 0x0000);
+//        CpuID = IfxCpu_getCoreId();
+//        CAN_SendSingle(&canMsgObj0, 0x112, (0x0000 | CpuID), 0x0000);
         OSSemPost(&Sem1, OS_OPT_POST_1, &err);
     }
 }
@@ -293,23 +312,27 @@ void AppTask1 ()
 void AppTask2 ()
 {
     OS_ERR       err;
-    OSTimeDlyHMSM(0, 0, 0, 230,
+    IfxCpu_Id   CpuID;
+    OSTimeDlyHMSM(0, 0, 0, 121,
                   OS_OPT_TIME_HMSM_STRICT,
                   &err);
-    CAN_SendSingle(&canMsgObj0, 0x201, 0x0000, 0x0000);
+    CAN_SendSingle(&canMsgObj0, 0x121, 0x0000, 0x0000);
 
     while (TRUE) {
-//        OSTimeDlyHMSM(0, 0, 0, 203,
-//                      OS_OPT_TIME_HMSM_STRICT,
-//                      &err);
-        OSSemPend(&Sem1, 0, OS_OPT_PEND_BLOCKING, NULL_PTR, &err);
-        CAN_SendSingle(&canMsgObj1, 0x202, 0x0000, 0x0000);
+        OSTimeDlyHMSM(0, 0, 1, 122,
+                      OS_OPT_TIME_HMSM_STRICT,
+                      &err);
+//        OSSemPend(&Sem1, 0, OS_OPT_PEND_BLOCKING, NULL_PTR, &err);
+        CpuID = IfxCpu_getCoreId();
+        CAN_SendSingle(&canMsgObj1, 0x122, (0x0000 | CpuID), 0x0000);
     }
 }
 
 void PeriodicTimerTask(OS_TMR *p_tmr, void *p_arg)
 {
-    CAN_SendSingle(&canMsgObj1, 0x301, 0x0000, 0x0000);
+    IfxCpu_Id   CpuID;
+    CpuID = IfxCpu_getCoreId();
+    CAN_SendSingle(&canMsgObj1, 0x301, (0x0000 | CpuID), 0x0000);
 }
 /*
 *********************************************************************************************************
@@ -326,6 +349,8 @@ void PeriodicTimerTask(OS_TMR *p_tmr, void *p_arg)
 static  void  AppTaskCreate (void)
 {
     OS_ERR       err;
+    AppTask1Ext.CoreID = 0;
+    AppTask2Ext.CoreID = 0;
     OSTaskCreate((OS_TCB     *)&AppTask1TCB,                /* Create the start task                                */
                  (CPU_CHAR   *)"App Task 1",
                  (OS_TASK_PTR ) AppTask1,
@@ -336,7 +361,7 @@ static  void  AppTaskCreate (void)
                  (CPU_STK_SIZE) APP_TASK_1_STK_SIZE,
                  (OS_MSG_QTY  ) 5u,
                  (OS_TICK     ) 0u,
-                 (void       *) 0,
+                 (void       *)&AppTask1Ext,
                  (OS_OPT      )(OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
                  (OS_ERR     *)&err);
 
@@ -350,7 +375,7 @@ static  void  AppTaskCreate (void)
                  (CPU_STK_SIZE) APP_TASK_2_STK_SIZE,
                  (OS_MSG_QTY  ) 5u,
                  (OS_TICK     ) 0u,
-                 (void       *) 0,
+                 (void       *)&AppTask2Ext,
                  (OS_OPT      )(OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
                  (OS_ERR     *)&err);
 }
@@ -372,9 +397,9 @@ static  void  AppTaskCreate (void)
 static  void  AppObjCreate (void)
 {
     OS_ERR err;
-    OSTmrCreate(&TaskTimer1, &"Timer 1", 0, 7, OS_OPT_TMR_PERIODIC, PeriodicTimerTask, (void *)0, &err);
+    OSTmrCreate(&TaskTimer1, (CPU_CHAR*)&"Timer 1", 0, 17, OS_OPT_TMR_PERIODIC, &PeriodicTimerTask, (void *)0, &err);
     OSTmrStart(&TaskTimer1, &err);
 
-    OSSemCreate(&Sem1, &"Sem1", 1, &err);
+    OSSemCreate(&Sem1, (CPU_CHAR*)&"Sem1", 1, &err);
 }
 

@@ -14,11 +14,11 @@
 *
 * LICENSING TERMS:
 * ---------------
-*           uC/OS-III is provided in source form for FREE short-term evaluation, for educational use or 
+*           uC/OS-III is provided in source form for FREE short-term evaluation, for educational use or
 *           for peaceful research.  If you plan or intend to use uC/OS-III in a commercial application/
-*           product then, you need to contact Micrium to properly license uC/OS-III for its use in your 
-*           application/product.   We provide ALL the source code for your convenience and to help you 
-*           experience uC/OS-III.  The fact that the source is provided does NOT mean that you can use 
+*           product then, you need to contact Micrium to properly license uC/OS-III for its use in your
+*           application/product.   We provide ALL the source code for your convenience and to help you
+*           experience uC/OS-III.  The fact that the source is provided does NOT mean that you can use
 *           it commercially without paying a licensing fee.
 *
 *           Knowledge of the source code may NOT be used to develop a similar product.
@@ -325,6 +325,7 @@ OS_FLAGS  OSFlagPend (OS_FLAG_GRP  *p_grp,
     OS_PEND_DATA  pend_data;
     CPU_SR_ALLOC();
 
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 #ifdef OS_SAFETY_CRITICAL
@@ -397,7 +398,7 @@ OS_FLAGS  OSFlagPend (OS_FLAG_GRP  *p_grp,
                  if (consume == DEF_TRUE) {                 /* See if we need to consume the flags                    */
                      p_grp->Flags &= ~flags_rdy;            /* Clear ONLY the flags that we wanted                    */
                  }
-                 OSTCBCurPtr->FlagsRdy = flags_rdy;         /* Save flags that were ready                             */
+                 OSTCBCurPtr[CpuID]->FlagsRdy = flags_rdy;         /* Save flags that were ready                             */
                  if (p_ts != (CPU_TS *)0) {
                     *p_ts  = p_grp->TS;
                  }
@@ -417,7 +418,7 @@ OS_FLAGS  OSFlagPend (OS_FLAG_GRP  *p_grp,
                      }
                  }
                                                             /* Lock the scheduler/re-enable interrupts                */
-                 OS_CRITICAL_ENTER_CPU_EXIT();              
+                 OS_CRITICAL_ENTER_CPU_EXIT();
                  OS_FlagBlock(&pend_data,
                               p_grp,
                               flags,
@@ -433,7 +434,7 @@ OS_FLAGS  OSFlagPend (OS_FLAG_GRP  *p_grp,
                  if (consume == DEF_TRUE) {                 /* See if we need to consume the flags                    */
                      p_grp->Flags &= ~flags_rdy;            /* Clear ONLY the flags that we got                       */
                  }
-                 OSTCBCurPtr->FlagsRdy = flags_rdy;         /* Save flags that were ready                             */
+                 OSTCBCurPtr[CpuID]->FlagsRdy = flags_rdy;         /* Save flags that were ready                             */
                  if (p_ts != (CPU_TS *)0) {
                     *p_ts  = p_grp->TS;
                  }
@@ -453,7 +454,7 @@ OS_FLAGS  OSFlagPend (OS_FLAG_GRP  *p_grp,
                      }
                  }
                                                             /* Lock the scheduler/re-enable interrupts                */
-                 OS_CRITICAL_ENTER_CPU_EXIT();              
+                 OS_CRITICAL_ENTER_CPU_EXIT();
                  OS_FlagBlock(&pend_data,
                               p_grp,
                               flags,
@@ -470,7 +471,7 @@ OS_FLAGS  OSFlagPend (OS_FLAG_GRP  *p_grp,
                  if (consume == DEF_TRUE) {                 /* See if we need to consume the flags                    */
                      p_grp->Flags |= flags_rdy;             /* Set ONLY the flags that we wanted                      */
                  }
-                 OSTCBCurPtr->FlagsRdy = flags_rdy;         /* Save flags that were ready                             */
+                 OSTCBCurPtr[CpuID]->FlagsRdy = flags_rdy;         /* Save flags that were ready                             */
                  if (p_ts != (CPU_TS *)0) {
                     *p_ts  = p_grp->TS;
                  }
@@ -489,7 +490,7 @@ OS_FLAGS  OSFlagPend (OS_FLAG_GRP  *p_grp,
                          return ((OS_FLAGS)0);
                      }
                  }
-                                                            
+
                  OS_CRITICAL_ENTER_CPU_EXIT();              /* Lock the scheduler/re-enable interrupts                */
                  OS_FlagBlock(&pend_data,
                               p_grp,
@@ -506,7 +507,7 @@ OS_FLAGS  OSFlagPend (OS_FLAG_GRP  *p_grp,
                  if (consume == DEF_TRUE) {                 /* See if we need to consume the flags                    */
                      p_grp->Flags |= flags_rdy;             /* Set ONLY the flags that we got                         */
                  }
-                 OSTCBCurPtr->FlagsRdy = flags_rdy;         /* Save flags that were ready                             */
+                 OSTCBCurPtr[CpuID]->FlagsRdy = flags_rdy;         /* Save flags that were ready                             */
                  if (p_ts != (CPU_TS *)0) {
                     *p_ts  = p_grp->TS;
                  }
@@ -525,9 +526,9 @@ OS_FLAGS  OSFlagPend (OS_FLAG_GRP  *p_grp,
                          return ((OS_FLAGS)0);
                      }
                  }
-                                                            
+
                  OS_CRITICAL_ENTER_CPU_EXIT();              /* Lock the scheduler/re-enable interrupts                */
-                 OS_FlagBlock(&pend_data,              
+                 OS_FlagBlock(&pend_data,
                               p_grp,
                               flags,
                               opt,
@@ -546,17 +547,17 @@ OS_FLAGS  OSFlagPend (OS_FLAG_GRP  *p_grp,
     OSSched();                                              /* Find next HPT ready to run                             */
 
     CPU_CRITICAL_ENTER();
-    switch (OSTCBCurPtr->PendStatus) {
+    switch (OSTCBCurPtr[CpuID]->PendStatus) {
         case OS_STATUS_PEND_OK:                             /* We got the vent flags                                  */
              if (p_ts != (CPU_TS *)0) {
-                *p_ts  = OSTCBCurPtr->TS;
+                *p_ts  = OSTCBCurPtr[CpuID]->TS;
              }
             *p_err = OS_ERR_NONE;
              break;
 
         case OS_STATUS_PEND_ABORT:                          /* Indicate that we aborted                               */
              if (p_ts != (CPU_TS *)0) {
-                *p_ts  = OSTCBCurPtr->TS;
+                *p_ts  = OSTCBCurPtr[CpuID]->TS;
              }
              CPU_CRITICAL_EXIT();
             *p_err = OS_ERR_PEND_ABORT;
@@ -572,7 +573,7 @@ OS_FLAGS  OSFlagPend (OS_FLAG_GRP  *p_grp,
 
         case OS_STATUS_PEND_DEL:                            /* Indicate that object pended on has been deleted        */
              if (p_ts != (CPU_TS *)0) {
-                *p_ts  = OSTCBCurPtr->TS;
+                *p_ts  = OSTCBCurPtr[CpuID]->TS;
              }
              CPU_CRITICAL_EXIT();
             *p_err = OS_ERR_OBJ_DEL;
@@ -587,7 +588,7 @@ OS_FLAGS  OSFlagPend (OS_FLAG_GRP  *p_grp,
         return ((OS_FLAGS)0);
     }
 
-    flags_rdy = OSTCBCurPtr->FlagsRdy;
+    flags_rdy = OSTCBCurPtr[CpuID]->FlagsRdy;
     if (consume == DEF_TRUE) {                              /* See if we need to consume the flags                    */
         switch (mode) {
             case OS_OPT_PEND_FLAG_SET_ALL:
@@ -751,6 +752,7 @@ OS_FLAGS  OSFlagPendGetFlagsRdy (OS_ERR  *p_err)
 {
     OS_FLAGS   flags;
     CPU_SR_ALLOC();
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 
@@ -769,7 +771,7 @@ OS_FLAGS  OSFlagPendGetFlagsRdy (OS_ERR  *p_err)
 #endif
 
     CPU_CRITICAL_ENTER();
-    flags = OSTCBCurPtr->FlagsRdy;
+    flags = OSTCBCurPtr[CpuID]->FlagsRdy;
     CPU_CRITICAL_EXIT();
    *p_err = OS_ERR_NONE;
     return (flags);
@@ -926,9 +928,10 @@ void  OS_FlagBlock (OS_PEND_DATA  *p_pend_data,
                     OS_OPT         opt,
                     OS_TICK        timeout)
 {
-    OSTCBCurPtr->FlagsPend = flags;                         /* Save the flags that we need to wait for                */
-    OSTCBCurPtr->FlagsOpt  = opt;                           /* Save the type of wait we are doing                     */
-    OSTCBCurPtr->FlagsRdy  = (OS_FLAGS)0;
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
+    OSTCBCurPtr[CpuID]->FlagsPend = flags;                         /* Save the flags that we need to wait for                */
+    OSTCBCurPtr[CpuID]->FlagsOpt  = opt;                           /* Save the type of wait we are doing                     */
+    OSTCBCurPtr[CpuID]->FlagsRdy  = (OS_FLAGS)0;
 
     OS_Pend(p_pend_data,
             (OS_PEND_OBJ *)((void *)p_grp),

@@ -14,11 +14,11 @@
 *
 * LICENSING TERMS:
 * ---------------
-*           uC/OS-III is provided in source form for FREE short-term evaluation, for educational use or 
+*           uC/OS-III is provided in source form for FREE short-term evaluation, for educational use or
 *           for peaceful research.  If you plan or intend to use uC/OS-III in a commercial application/
-*           product then, you need to contact Micrium to properly license uC/OS-III for its use in your 
-*           application/product.   We provide ALL the source code for your convenience and to help you 
-*           experience uC/OS-III.  The fact that the source is provided does NOT mean that you can use 
+*           product then, you need to contact Micrium to properly license uC/OS-III for its use in your
+*           application/product.   We provide ALL the source code for your convenience and to help you
+*           experience uC/OS-III.  The fact that the source is provided does NOT mean that you can use
 *           it commercially without paying a licensing fee.
 *
 *           Knowledge of the source code may NOT be used to develop a similar product.
@@ -391,6 +391,7 @@ void  *OSQPend (OS_Q         *p_q,
     OS_PEND_DATA  pend_data;
     void         *p_void;
     CPU_SR_ALLOC();
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 
@@ -471,12 +472,12 @@ void  *OSQPend (OS_Q         *p_q,
     OSSched();                                              /* Find the next highest priority task ready to run       */
 
     CPU_CRITICAL_ENTER();
-    switch (OSTCBCurPtr->PendStatus) {
+    switch (OSTCBCurPtr[CpuID]->PendStatus) {
         case OS_STATUS_PEND_OK:                             /* Extract message from TCB (Put there by Post)           */
-             p_void     = OSTCBCurPtr->MsgPtr;
-            *p_msg_size = OSTCBCurPtr->MsgSize;
+             p_void     = OSTCBCurPtr[CpuID]->MsgPtr;
+            *p_msg_size = OSTCBCurPtr[CpuID]->MsgSize;
              if (p_ts  != (CPU_TS *)0) {
-                *p_ts   =  OSTCBCurPtr->TS;
+                *p_ts   =  OSTCBCurPtr[CpuID]->TS;
              }
             *p_err      = OS_ERR_NONE;
              break;
@@ -485,7 +486,7 @@ void  *OSQPend (OS_Q         *p_q,
              p_void     = (void      *)0;
             *p_msg_size = (OS_MSG_SIZE)0;
              if (p_ts  != (CPU_TS *)0) {
-                *p_ts   =  OSTCBCurPtr->TS;
+                *p_ts   =  OSTCBCurPtr[CpuID]->TS;
              }
             *p_err      = OS_ERR_PEND_ABORT;
              break;
@@ -503,7 +504,7 @@ void  *OSQPend (OS_Q         *p_q,
              p_void     = (void      *)0;
             *p_msg_size = (OS_MSG_SIZE)0;
              if (p_ts  != (CPU_TS *)0) {
-                *p_ts   =  OSTCBCurPtr->TS;
+                *p_ts   =  OSTCBCurPtr[CpuID]->TS;
              }
             *p_err      = OS_ERR_OBJ_DEL;
              break;

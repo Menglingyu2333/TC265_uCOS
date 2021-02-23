@@ -14,11 +14,11 @@
 *
 * LICENSING TERMS:
 * ---------------
-*           uC/OS-III is provided in source form for FREE short-term evaluation, for educational use or 
+*           uC/OS-III is provided in source form for FREE short-term evaluation, for educational use or
 *           for peaceful research.  If you plan or intend to use uC/OS-III in a commercial application/
-*           product then, you need to contact Micrium to properly license uC/OS-III for its use in your 
-*           application/product.   We provide ALL the source code for your convenience and to help you 
-*           experience uC/OS-III.  The fact that the source is provided does NOT mean that you can use 
+*           product then, you need to contact Micrium to properly license uC/OS-III for its use in your
+*           application/product.   We provide ALL the source code for your convenience and to help you
+*           experience uC/OS-III.  The fact that the source is provided does NOT mean that you can use
 *           it commercially without paying a licensing fee.
 *
 *           Knowledge of the source code may NOT be used to develop a similar product.
@@ -127,6 +127,7 @@ OS_OBJ_QTY  OSPendMulti (OS_PEND_DATA  *p_pend_data_tbl,
     CPU_BOOLEAN   valid;
     OS_OBJ_QTY    nbr_obj_rdy;
     CPU_SR_ALLOC();
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 
@@ -204,7 +205,7 @@ OS_OBJ_QTY  OSPendMulti (OS_PEND_DATA  *p_pend_data_tbl,
     OSSched();                                              /* Find next highest priority task ready                  */
 
     CPU_CRITICAL_ENTER();
-    switch (OSTCBCurPtr->PendStatus) {
+    switch (OSTCBCurPtr[CpuID]->PendStatus) {
         case OS_STATUS_PEND_OK:                             /* We got one of the objects posted to                    */
             *p_err = OS_ERR_NONE;
              break;
@@ -226,7 +227,7 @@ OS_OBJ_QTY  OSPendMulti (OS_PEND_DATA  *p_pend_data_tbl,
              break;
     }
 
-    OSTCBCurPtr->PendStatus = OS_STATUS_PEND_OK;
+    OSTCBCurPtr[CpuID]->PendStatus = OS_STATUS_PEND_OK;
     CPU_CRITICAL_EXIT();
 
     return ((OS_OBJ_QTY)1);
@@ -408,19 +409,20 @@ void  OS_PendMultiWait (OS_PEND_DATA  *p_pend_data_tbl,
 #if OS_CFG_SEM_EN > 0u
     OS_SEM         *p_sem;
 #endif
+    IfxCpu_Id CpuID = IfxCpu_getCoreId();
 
 
 
-    OSTCBCurPtr->PendOn             = OS_TASK_PEND_ON_MULTI;   /* Resource not available, wait until it is            */
-    OSTCBCurPtr->PendStatus         = OS_STATUS_PEND_OK;
-    OSTCBCurPtr->PendDataTblEntries = tbl_size;
-    OSTCBCurPtr->PendDataTblPtr     = p_pend_data_tbl;
+    OSTCBCurPtr[CpuID]->PendOn             = OS_TASK_PEND_ON_MULTI;   /* Resource not available, wait until it is            */
+    OSTCBCurPtr[CpuID]->PendStatus         = OS_STATUS_PEND_OK;
+    OSTCBCurPtr[CpuID]->PendDataTblEntries = tbl_size;
+    OSTCBCurPtr[CpuID]->PendDataTblPtr     = p_pend_data_tbl;
 
-    OS_TaskBlock(OSTCBCurPtr,                                  /* Block the task waiting for object to be posted ...  */
+    OS_TaskBlock(OSTCBCurPtr[CpuID],                                  /* Block the task waiting for object to be posted ...  */
                  timeout);                                     /* ... but with a timeout if not                       */
 
     for (i = 0u; i < tbl_size; i++) {
-        p_pend_data_tbl->TCBPtr = OSTCBCurPtr;                 /* Every entry points back to the TCB of the task      */
+        p_pend_data_tbl->TCBPtr = OSTCBCurPtr[CpuID];                 /* Every entry points back to the TCB of the task      */
 
 #if OS_CFG_SEM_EN > 0u
         p_sem = (OS_SEM *)((void *)p_pend_data_tbl->PendObjPtr);

@@ -2,6 +2,14 @@
 # Automatically-generated file. Do not edit!
 ################################################################################
 
+################################################################################
+# Automatically-generated file. Do not edit!
+################################################################################
+
+################################################################################
+# Automatically-generated file. Do not edit!
+################################################################################
+
 os_cpu_c.o :	../OS/uCOS-III/Ports/Tricore/Generic/Tasking/os_cpu_c.c
 ../OS/uCOS-III/Ports/Tricore/Generic/Tasking/os_cpu_c.c :
 os_cpu_c.o :	../OS/EvalBoards/Infineon/Tricore/TC265/includes.h
@@ -74,6 +82,8 @@ os_cpu_c.o :	../OS/uCOS-III/Ports/Tricore/Generic/Tasking/os_cpu.h
 ../OS/uCOS-III/Ports/Tricore/Generic/Tasking/os_cpu.h :
 os_cpu_c.o :	../OS/uC-CPU/Tricore/Tasking/cpu.h
 ../OS/uC-CPU/Tricore/Tasking/cpu.h :
+os_cpu_c.o :	../Libraries/Service/CpuGeneric/SysSe/Bsp/Bsp.h
+../Libraries/Service/CpuGeneric/SysSe/Bsp/Bsp.h :
 os_cpu_c.o :	../OS/uCOS-III/Source/os.h
 ../OS/uCOS-III/Source/os.h :
 os_cpu_c.o :	../OS/EvalBoards/Infineon/Tricore/TC265/os_cfg.h

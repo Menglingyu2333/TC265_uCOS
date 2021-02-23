@@ -45,55 +45,6 @@
 
 #include "Bsp.h"
 
-Ifx_TickTime TimeConst[TIMER_COUNT];
-
-/** \brief Initialize the time constants.
- *
- * Initialize the time constants TimeConst_0s, TimeConst_100ns, TimeConst_1us,
- * TimeConst_10us, TimeConst_100us, TimeConst_1ms, TimeConst_10ms, TimeConst_100ms,
- * TimeConst_1s, TimeConst_10s
- * \return None.
- */
-void initTime(void)
-{
-    sint32 Fsys = IfxStm_getFrequency(BSP_DEFAULT_TIMER);
-
-    TimeConst[TIMER_INDEX_10NS]  = Fsys / (1000000000 / 10);
-    TimeConst[TIMER_INDEX_100NS] = Fsys / (1000000000 / 100);
-    TimeConst[TIMER_INDEX_1US]   = Fsys / (1000000 / 1);
-    TimeConst[TIMER_INDEX_10US]  = Fsys / (1000000 / 10);
-    TimeConst[TIMER_INDEX_100US] = Fsys / (1000000 / 100);
-    TimeConst[TIMER_INDEX_1MS]   = Fsys / (1000 / 1);
-    TimeConst[TIMER_INDEX_10MS]  = Fsys / (1000 / 10);
-    TimeConst[TIMER_INDEX_100MS] = Fsys / (1000 / 100);
-    TimeConst[TIMER_INDEX_1S]    = Fsys * (1);
-    TimeConst[TIMER_INDEX_10S]   = Fsys * (10);
-    TimeConst[TIMER_INDEX_100S]  = Fsys * (100);
-}
-
-
-/** \brief Wait function.
- *
- * This is an empty function that just spend some time waiting.
- *
- * \return None.
- */
-void waitPoll(void)
-{}
-
-/** \brief Wait time function.
- *
- * This is an empty function that that returns after the timeout elapsed. The
- * minimal time spend in the function is guaranteed, but not the max time.
- *
- * \param timeout Specifies the time the function waits for before returning
- *
- * \return None.
- */
-void waitTime(Ifx_TickTime timeout)
-{
-    wait(timeout);
-}
 
 /*$PAGE*/
 /*
@@ -175,6 +126,35 @@ CPU_INT32U  BSP_CPU_ClkFreq (void)
 {
     return ((CPU_INT32U)IfxStm_getFrequency(BSP_DEFAULT_TIMER));
 }
+
+
+#define OS_TASK_SW_PRIO_CPU0     32
+#define OS_TASK_SW_PRIO_CPU1     31
+
+void OSTaskSwIntHandler_Cpu0(void)
+{
+    IfxSrc_clearRequest(&SRC_GPSR_GPSR0_SR0);
+    OSCtxSw(0);
+}
+void OSTaskSwIntHandler_Cpu1(void)
+{
+    IfxSrc_clearRequest(&SRC_GPSR_GPSR0_SR1);
+    OSCtxSw(1);
+
+}
+IFX_INTERRUPT(OSTaskSwIntHandler_Cpu0, 0, OS_TASK_SW_PRIO_CPU0);
+IFX_INTERRUPT(OSTaskSwIntHandler_Cpu1, 0, OS_TASK_SW_PRIO_CPU1);
+void OSTaskSwIntInit(void)
+{
+    IfxSrc_init(&SRC_GPSR_GPSR0_SR0, IfxSrc_Tos_cpu0, OS_TASK_SW_PRIO_CPU0);
+    IfxSrc_enable(&SRC_GPSR_GPSR0_SR0);
+    IfxSrc_init(&SRC_GPSR_GPSR0_SR1, IfxSrc_Tos_cpu1, OS_TASK_SW_PRIO_CPU1);
+    IfxSrc_enable(&SRC_GPSR_GPSR0_SR1);
+}
+
+
+
+
 
 /*
 *********************************************************************************************************
